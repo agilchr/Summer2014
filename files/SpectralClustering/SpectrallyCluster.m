@@ -1,7 +1,7 @@
 % We've changed this file to screw around with the segmentation,
 % and now, it's our file! Muah ha ha ha ha!
 
-function SpectrallyCluster(FileName,groupfilename,k,Neighbors,sigma)
+function conf = SpectrallyCluster(FileName,groupfilename,k,Neighbors,sigma)
 
     global debug;
     dState = debug;
@@ -33,6 +33,7 @@ function SpectrallyCluster(FileName,groupfilename,k,Neighbors,sigma)
     end
 
     saveData  = true;      % Whether or not to save the data once computed
+    graphConfusion = true; % Whether or not to graph the confusion matrix
     
     disp(FileName)
     Data = csvread(FileName);
@@ -108,8 +109,26 @@ function SpectrallyCluster(FileName,groupfilename,k,Neighbors,sigma)
     
     disp(conf)
     
+    %Two different methods of graphing the confusion matrix
+    if graphConfusion
+        figure
+        bar(conf)
+    end
     
     
+    % if graphConfusion
+    %     figure
+    %     plotVar = 100 + 10*k;
+    %     for graph = 1:k
+    %         thisPlotVar = plotVar + graph;
+    %         subplot(thisPlotVar);
+    %         bar(conf(graph,:))
+    %         title(sprintf('Estimation of class %d versus actual class', graph));
+    %         xlabel('Actual class label')
+    %         ylabel('Number of examples')
+    %     end
+    % end
+           
     if saveData
         results = zeros(size(Data',1),size(Data',2) + 1);
         results(:,1) = D;
