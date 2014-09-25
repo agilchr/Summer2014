@@ -1,0 +1,21 @@
+Universe = vanilla 
+Executable = /sonigroup/summer2014/agilchr1/brainseg2014/files/condor/bashSlicExactR.sh
+InitialDir = /sonigroup/summer2014/agilchr1/brainseg2014/files/condor
+Notification = Never 
+getenv = True 
+Log = /sonigroup/summer2014/agilchr1/condorOut/slicExactR/patient$(Process).log
+Error = /sonigroup/summer2014/agilchr1/condorOut/slicExactR/patient$(Process).err
+Output = /sonigroup/summer2014/agilchr1/condorOut/slicExactR/patient$(Process).out
+requirements = (Memory > 1000) && (SlotID == 4) \
+	     && (Machine =!= "cinnamon.cs.swarthmore.edu") \
+	     && (Machine =!= "olive.cs.swarthmore.edu") \
+	     && (Machine =!= "perilla.cs.swarthmore.edu")
+
+Arguments = 'rAD' $(Process)
+queue 92
+
+Arguments = 'rMCI' $(Process)-92
+queue 203
+
+Arguments = 'rCN' $(Process)-92-203
+queue 102

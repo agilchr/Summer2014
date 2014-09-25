@@ -169,6 +169,7 @@ function [X, indexList] = load_nifti(imageType,imageNum)
     fprintf('Loading Nifti Image...\n');
     
     imageName = '';
+        
     if (strcmp(imageType, 'IBSR'))
         
         if (imageNum < 10)
@@ -182,7 +183,12 @@ function [X, indexList] = load_nifti(imageType,imageNum)
     elseif (strcmp(imageType, 'AD')) || (strcmp(imageType,'MCI')) || ...
             (strcmp(imageType,'CN'))
         imageName = strcat('/scratch/tgelles1/summer2014/ADNI_cropped/', ...
-                           imageType, sprintf('%03d',imageNum),'.nii'); ...
+                           imageType, sprintf('%03d',imageNum),'.nii');
+    elseif (strcmp(imageType, 'rAD')) || (strcmp(imageType,'rMCI')) || ...
+            (strcmp(imageType,'rCN'))
+        imageName = strcat('/scratch/tgelles1/summer2014/ADNI_cropped/', ...
+                           'coregistered/', imageType, ...
+                           sprintf('%03d',imageNum),'.nii');
     else
         imageName = imageType;
     end

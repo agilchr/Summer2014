@@ -5,8 +5,8 @@
 % wrapper used in MATLAB in order to run experiments with SLIC_3DExact
 % and getSLICFeatures.
 
-function slicFeatures = condor_runSLICExact(imageType, imageNum, numSuperVoxels, ...
-                                shapeParam, numIters)
+function slicFeatures = runSLICExact(imageType, imageNum, numSuperVoxels, ...
+                                shapeParam, numIters, saveDir)
     % slicFeatures - Returns the list of features obtained from
     % getSLICFeatures()
     %
@@ -34,7 +34,6 @@ function slicFeatures = condor_runSLICExact(imageType, imageNum, numSuperVoxels,
     end
 
     if ~exist('numSuperVoxels', 'var')
-
         numSuperVoxels = 125;
     end
     
@@ -50,8 +49,11 @@ function slicFeatures = condor_runSLICExact(imageType, imageNum, numSuperVoxels,
     saveFiles = true;
          
     % base directory
-    saveDir = strcat('/scratch/tgelles1/summer2014/slicExact', ...
-                     num2str(numSuperVoxels), '/');
+    if ~exist('saveDir','var')
+        saveDir = strcat('/scratch/tgelles1/summer2014/slicExact', ...
+                         num2str(numSuperVoxels), '/');
+    end
+    
     if ~exist(saveDir,'dir')
         mkdir(saveDir);
     end
@@ -105,6 +107,7 @@ function slicFeatures = condor_runSLICExact(imageType, imageNum, numSuperVoxels,
     else
         
         [X cropOffset] = load_nifti(imageType,imageNum);
+        
         [labels border centerInfo] = SLIC_3DExact(X, numSuperVoxels, ...
                                                   shapeParam, numIters);
         
@@ -166,6 +169,7 @@ function [X, indexList] = load_nifti(imageType,imageNum)
     fprintf('Loading Nifti Image...\n');
     
     imageName = '';
+        
     if (strcmp(imageType, 'IBSR'))
         
         if (imageNum < 10)
@@ -179,7 +183,12 @@ function [X, indexList] = load_nifti(imageType,imageNum)
     elseif (strcmp(imageType, 'AD')) || (strcmp(imageType,'MCI')) || ...
             (strcmp(imageType,'CN'))
         imageName = strcat('/scratch/tgelles1/summer2014/ADNI_cropped/', ...
-                           imageType, sprintf('%03d',imageNum),'.nii'); ...
+                           imageType, sprintf('%03d',imageNum),'.nii');
+    elseif (strcmp(imageType, 'rAD')) || (strcmp(imageType,'rMCI')) || ...
+            (strcmp(imageType,'rCN'))
+        imageName = strcat('/scratch/tgelles1/summer2014/ADNI_cropped/', ...
+                           'coregistered/', imageType, ...
+                           sprintf('%03d',imageNum),'.nii');
     else
         imageName = imageType;
     end
