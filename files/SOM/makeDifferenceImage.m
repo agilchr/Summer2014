@@ -16,10 +16,10 @@ function makeDifferenceImage()
     numCN = 0;
     
     for i = 1:length(direc)
-        if direc(i).isdir
+        filename = direc(i).name;
+        if direc(i).isdir || ~strcmp(filename(1:3),'co_')
             continue
         end
-        filename = direc(i).name;
         if filename(4) == 'M'
             % continues if we're dealing with an MCI file
             continue
@@ -31,6 +31,12 @@ function makeDifferenceImage()
                 meanADimage = ADimage;
             end
             numAD = numAD + 1;
+            if (any(isnan(ADimage(:))))
+                disp(filename)
+            end
+            if any(isnan(meanADimage(:)))
+                disp(filename)
+            end
         elseif filename(4) == 'C'
             CNimage = load_nifti([directory_name,filename]);
             if exist('meanCNimage','var')
@@ -39,15 +45,26 @@ function makeDifferenceImage()
                 meanCNimage = CNimage;
             end
             numCN = numCN + 1;
+            if any(isnan(CNimage(:)))
+                disp(filename)
+            end
+            if any(isnan(meanCNimage(:)))
+                disp(filename)
+            end
+
         end
     end
-    
+    %disp(meanADimage);
+    disp(any(isnan(ADimage)));
+    if (any(isnan(meanADimage(:))))
+        disp('Bad bad meanADimage. It is a pooopy head')
+    end
     meanADimage = meanADimage / numAD;
     meanCNimage = meanCNimage / numCN;
     
-    diffImage = meanCNimage - meanADimage
+    diffImage = meanCNimage - meanADimage;
     
-    diffNii = make_nii(diffImage)
+    diffNii = make_nii(diffImage);
     save_nii(diffNii, [directory_name,'AD_CN_differenceImage.nii'])
     
 end
