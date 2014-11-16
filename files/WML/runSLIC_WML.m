@@ -50,7 +50,7 @@ function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
     end
     
     %For the entropy runs, we don't want the images saved
-    saveFiles = false;
+    saveFiles = true;
     
     % base directory
     saveDir = ['/sonigroup/brain/data/WhiteMatterLesion/T1_SLIC_', ...
@@ -60,28 +60,34 @@ function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
     end
     
     loadDir = '/sonigroup/brain/data/WhiteMatterLesion/T1_stripped/';
+    truthDir = '/sonigroup/brain/data/WhiteMatterLesion/ground_truth/';
+    
+    imageName = imageNumToName(imageNum, loadDir)
+
+    fullImageName = [loadDir, imageName]
+    truthImageName = [truthDir, imageName]
     
     % file addressing specific to each of the different type of
     % file we may choose to run
     slicAddr=strcat(saveDir,'slic','-', ...
                     num2str(numSuperVoxels),'-',num2str(shapeParam), ...
-                    '-',num2str(res),'-',sprintf('%03d',imageNum),'-', ...
+                    '-',num2str(res),'-',imageName,'-', ...
                     num2str(numIters),'.nii');
     borderAddr=strcat(saveDir,'border','-', ...
                       num2str(numSuperVoxels),'-',num2str(shapeParam), ...
-                      '-',num2str(res),'-',sprintf('%03d',imageNum), ...
+                      '-',num2str(res),'-',imageName, ...
                       '-',num2str(numIters),'.nii');
     xAddr=strcat(saveDir,'x','-', ...
                  num2str(numSuperVoxels),'-',num2str(shapeParam), ...
-                 '-',num2str(res),'-',sprintf('%03d',imageNum), '-', ...
+                 '-',num2str(res),'-',imageName, '-', ...
                  num2str(numIters),'.nii');
     centerinfoAddr=strcat(saveDir,'centerinfo','-', ...
                           num2str(numSuperVoxels),'-',num2str(shapeParam), ...
-                          '-',num2str(res),'-',sprintf('%03d',imageNum), ...
+                          '-',num2str(res),'-',imageName, ...
                           '-',num2str(numIters),'.mat');
     cropAddr=strcat(saveDir,'cropoffset','-', ...
                     num2str(numSuperVoxels),'-',num2str(shapeParam), ...
-                    '-',num2str(res),'-',sprintf('%03d',imageNum), ...
+                    '-',num2str(res),'-',imageName, ...
                     '-',num2str(numIters),'.mat');
     
     fprintf('Saving slic file to: %s\n', slicAddr);
@@ -112,7 +118,7 @@ function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
         cropOffset = cropOffset.cropOffset;
     else
         
-        [X cropOffset] = load_nifti(imageNum,loadDir,res);
+        [X cropOffset] = load_nifti(fullImageName,res, true);
         
         [labels border centerInfo] = SLIC_3D(X,numSuperVoxels, ...
                                              shapeParam, numIters);
@@ -129,48 +135,29 @@ function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
             save(cropAddr, 'cropOffset');
         end
     end
+
+    truth = load_nifti(truthImageName, 1, false);
+
+    featureDir = [saveDir, 'features/'];
     
-    featureFilename = strcat(saveDir, 'features/', imageType, ...
-                             sprintf('%03d',imageNum),'.txt');
+    if ~exist(featureDir,'dir')
+        mkdir(featureDir);
+    end
+    
+    featureFilename = [featureDir,imageName,'.txt'];
     
     fprintf('Saving feature file to: %s\n', featureFilename);
     
-    slicFeatures = getSLICFeatures(X, labels, tissues, centerInfo, ...
-                                      cropOffset,featureFilename, id);
+    wmlFeatures = getWMLFeatures(X, labels, truth, centerInfo, ...
+                                      cropOffset,featureFilename, imageNum);
 end
 
 
-function [X, indexList] = load_nifti(imageNum, loadDir, res)
+function [X, indexList] = load_nifti(imageName, res, crop)
 
 
     fprintf('Loading WML Image...\n');
     
-    imageName = '';
-    
-    listing = dir(loadDir);
-    
-    fileNames = {};
-    
-    for i = 1:length(listing)
-        %use the image num to reference a certain file in the directory
-        if ~(listing(i).isdir) && ~any(listing(i).name  == '_') && ...
-                ~strcmp(listing(i).name(end-2:end),'.py')
-            % only accept files without _ in them
-            fileNames{end+1} = [loadDir,listing(i).name];
-        end
-    end
-    
-    imageName = fileNames{imageNum}
-        
-    
-    if (~exist(imageName, 'file'))
-        exception = MException('file:dne', ['file %s does not exist ' ...
-                            'or you do not have proper permissions'], ...
-                               imageName);
-        throw(exception);
-    end
-    
-
     fprintf('ImageName: %s\n', imageName);
     
     %Image
@@ -179,9 +166,10 @@ function [X, indexList] = load_nifti(imageNum, loadDir, res)
     I_T1 = spm_read_vols(I_uncompt1);
     X = I_T1;
     
-    
-    X = X(1:res:end,1:res:end,1:res:end);
-    [X indexList] = cropBlack(X);
+    if crop
+        X = X(1:res:end,1:res:end,1:res:end);
+        [X indexList] = cropBlack(X);
+    end
 end
 
 function tissues = load_tissues(tissueFilename, cropOffset, res)
@@ -194,3 +182,35 @@ function tissues = load_tissues(tissueFilename, cropOffset, res)
                                                       1):cropOffset(3, ...
                                                       2));
 end
+
+function imageName = imageNumToName(imageNum, loadDir)
+    imageName = '';
+    
+    listing = dir(loadDir);
+    
+    fileNames = {};
+    
+    for i = 1:length(listing)
+        %use the image num to reference a certain file in the directory
+        if ~(listing(i).isdir) && ~any(listing(i).name  == '_') && ...
+                ~strcmp(listing(i).name(end-2:end),'.py')
+            % only accept files without _ in them
+            fileNames{end+1} = listing(i).name;
+        end
+    end
+    
+    imageName = fileNames{imageNum}
+        
+    
+    if (~exist([loadDir,imageName], 'file'))
+        exception = MException('file:dne', ['file %s does not exist ' ...
+                            'or you do not have proper permissions'], ...
+                               imageName);
+        throw(exception);
+    end
+
+end
+    
+
+
+    
