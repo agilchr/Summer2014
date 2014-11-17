@@ -108,8 +108,8 @@ function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
         
         fprintf('Relevant Files Already Exist, Loading...\n');
         
-        labels = load_nifti(slicAddr, imageNum, 1);
-        X = load_nifti(xAddr, imageNum, 1);
+        labels = load_nifti(slicAddr, 1, false);
+        X = load_nifti(xAddr, 1, false);
         
         centerInfo = load(centerinfoAddr);
         cropOffset = load(cropAddr);
@@ -147,6 +147,12 @@ function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
     featureFilename = [featureDir,imageName,'.txt'];
     
     fprintf('Saving feature file to: %s\n', featureFilename);
+    
+    disp('size of x')
+    disp(size(X))
+    disp('size of labels')
+    disp(size(labels));
+    disp('cropoffset')
     
     wmlFeatures = getWMLFeatures(X, labels, truth, centerInfo, ...
                                       cropOffset,featureFilename, imageNum);
