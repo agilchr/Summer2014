@@ -2,8 +2,11 @@ function runSOM()
     
     loadDir = ['/scratch/tgelles1/summer2014/ADNI_cropped/' ...
                'coregistered/'];
+    diffName = ['/scratch/tgelles1/summer2014/ADNI_cropped/' ...
+                'coregistered/AD_CN_differenceImage.nii'];
 
     [allbrains ADbrains CNbrains] = loadADandCNBrains(loadDir);
+    diffBrain = load_nifti(diffName);
     
     FDR = getFDR(ADbrains, CNbrains);
     
@@ -14,49 +17,39 @@ function runSOM()
     clear ADbrains;
     clear CNbrains;
     
-    fprintf('Splitting the brains into vectors\n');
+    fprintf('Splitting the diff image into vectors\n');
     
-    n = length(allbrains);
-    [l w h] = size(allbrains{1});
+    [l w h] = size(diffBrain);
     
-    vectorList = cell(n*l*w*h,1);
+    vectorList = zeros(4,l*w*h);
     
     vector_i = 1;
     
-    for brain_i = 1:length(allbrains)/5
-        fprintf('On brain %d\n',brain_i);
-        brain = allbrains{brain_i};
-        for x_i = 1:l
-            for y_i = 1:w
-                for z_i = 1:h
-                    vectorList{vector_i} = [x_i,y_i,z_i,brain(x_i,y_i,z_i)];
-                    % if brain_i == 1
-                    %     disp(vectorList{vector_i});
-                    % end
-                    vector_i = vector_i + 1;
-                end
+    for x_i = 1:l
+        for y_i = 1:w
+            for z_i = 1:h
+                vectorList(:,vector_i) = [x_i;y_i;z_i;diffBrain(x_i,y_i,z_i)];
+                vector_i = vector_i + 1;
             end
         end
-        clear brain;
-        clear allbrains{brain_i};
     end
 
-    
-    
-    % vectorList = splitBrainToVector(allbrains);
-    % clear allbrains;
+    clear diffBrain;
         
     fprintf('Making the self organizing map\n');
-    net = selforgmap([1 4]);
+    net = selforgmap([4 8]);
     fprintf('Training the self organizing map\n');
     net = train(net,vectorList);
     fprintf('Viewing the self organizing map\n');
     view(net);
-    y = net(allbrains);
-    classes = vec2ind(y);
+    figure('Visible','off');
+    plotsompos(net,vectorList);
+    saveas(gcf,'sompos.fig','fig')
     
+    % to open: openfig('sompos.fig','new','visible')
     
-
+    % y = net(allbrains);
+    % classes = vec2ind(y);
 end
 
 function [X] = load_nifti(fullFileName)
