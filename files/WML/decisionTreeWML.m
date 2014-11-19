@@ -1,11 +1,12 @@
 % The following code is using an SVM to attempt to classify our
-% supervoxels that contain White Matter Lesions
+% brains with White Matter Lesions
 %
 % Written by Andrew Gilchrist-Scott
 %
-% Note: this used libsvm rather than matlab's built-in SVM software
+% Note: this uses the binary decision tree which is only
+% implemented in MATLAB 2014 or later
 
-function accuracy = svmWML(fileName, numFolds)
+function accuracy = decisionTreeWML(fileName, numFolds)
     
     if ~exist('numFolds','var')
         numFolds = 5;
@@ -37,33 +38,17 @@ function accuracy = svmWML(fileName, numFolds)
         trainID = trainLabelCell{fold};
         testID = testLabelCell{fold};
         
-        % Trade off commented regions to try to vary parameters for
-        % the SVM
-        model = svmtrain(trainID, train);
-
-        % bestcv = 0;
-        % for log2c = -1:10,
-        %     for log2g = -4:-4,
-        %         cmd = ['-v 5 -c ', num2str(10^log2c), ' -g ', ...
-        %                num2str(2^log2g), ' -t 2'];
-        %         cv = svmtrain(trainID, train, cmd);
-        %         if (cv > bestcv),
-        %             bestcv = cv; bestc = 10^log2c; bestg = 2^log2g;
-        %         end
-        %         fprintf('%g %g %g (best c=%g, g=%g, rate=%g)\n', log2c, log2g, cv, bestc, bestg, bestcv);
-        %     end
-        % end
-
-        % cmd = ['-c ', num2str(bestc), ' -g ', num2str(bestg), '-t 2'];
-        % model = svmtrain(trainID, train, cmd);
+        tree = fitctree(train,trainID);
         
-        [predictions, acc, probs] = svmpredict(testID, test, ...
-                                               model);
+        predictions = predict(tree,test);
         
         makeConfusionMatrix(predictions,testID)
         
         %        disp([predictions, testID]);        
-        totalAcc(fold) = acc(1);
+        
+        acc = sum(testID == predictions)/length(testID);
+        
+        totalAcc(fold) = acc;
     end
     
     fprintf('\n');
