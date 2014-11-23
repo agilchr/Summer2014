@@ -19,7 +19,91 @@ function runSOM()
     
     fprintf('Splitting the diff image into vectors\n');
     
-    [l w h] = size(diffBrain);
+
+    vectorList = makeVectorList(diffBrain);
+
+    clear diffBrain;
+
+    if ~exist('diffClusterNet.mat', 'file')
+        
+        fprintf('Making the self organizing map\n');
+        net = selforgmap([4 8]);
+        fprintf('Training the self organizing map\n');
+        net = train(net,vectorList);
+        fprintf('Viewing the self organizing map\n');
+        view(net);
+        figure('Visible','off');
+        plotsompos(net,vectorList);
+        saveas(gcf,'sompos.fig','fig')
+        fprintf('MATLAB net class: %s\n', class(net));
+        save diffClusterNet.mat net;
+        disp(net);
+    else
+        fprintf(['Self Organized Map Already Exists in diffClusterNet.mat. ' ...
+                 'Loading...\n']);
+        net = load('diffClusterNet.mat');
+        net = net.net;
+    end
+
+    for i=1:length(allbrains)
+        curBrain = allbrains{i};
+
+        fprintf('curBrain: %s\n', class(curBrain));
+        % disp(curBrain);
+        
+        curVectorList = makeVectorList(curBrain);
+        y = net(curVectorList);
+        classes = vec2ind(y);
+
+        fprintf('MATLAB classes (vec2ind) class: %s\n', ...
+                class(classes));
+        fprintf('MATLAB net(curVectorList) class: %s\n', class(y));
+
+        curFileName = ['brain', num2str(i), 'array.mat'];
+        save(curFileName, 'y');
+
+        curFileName = ['brain', num2str(i), 'classes.mat'];
+        save(curFileName, 'classes');
+
+        clusteringFileName = ['brain', num2str(i), 'clusters.nii'];
+        saveClusteringAsNifti(curBrain, classes, curVectorList, ...
+                              clusteringFileName);
+
+        clear curVectorList;
+        clear y;
+        clear classes;
+        clear curBrain;
+
+        clear allbrains(i);
+    end
+
+    % to open: openfig('sompos.fig','new','visible')
+    
+    % y = net(allbrains);
+    % classes = vec2ind(y);
+end
+
+function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
+                               fileName)
+
+    classBrain = curBrain;
+    for i=1:length(curVectorList)
+        curVec = curVectorList(i, 1:3);
+        x = curVec(1);
+        y = curVec(2);
+        z = curVec(3);
+        classBrain(x, y, z) = classes(i);
+    end
+
+    nii = make_nii(classBrain);
+    save_nii(nii, fileName);
+
+    clear classBrain;
+end
+    
+function vectorList = makeVectorList(brain)
+
+    [l w h] = size(brain);
     
     vectorList = zeros(4,l*w*h);
     
@@ -28,28 +112,11 @@ function runSOM()
     for x_i = 1:l
         for y_i = 1:w
             for z_i = 1:h
-                vectorList(:,vector_i) = [x_i;y_i;z_i;diffBrain(x_i,y_i,z_i)];
+                vectorList(:,vector_i) = [x_i;y_i;z_i;brain(x_i,y_i,z_i)];
                 vector_i = vector_i + 1;
             end
         end
     end
-
-    clear diffBrain;
-        
-    fprintf('Making the self organizing map\n');
-    net = selforgmap([4 8]);
-    fprintf('Training the self organizing map\n');
-    net = train(net,vectorList);
-    fprintf('Viewing the self organizing map\n');
-    view(net);
-    figure('Visible','off');
-    plotsompos(net,vectorList);
-    saveas(gcf,'sompos.fig','fig')
-    
-    % to open: openfig('sompos.fig','new','visible')
-    
-    % y = net(allbrains);
-    % classes = vec2ind(y);
 end
 
 function [X] = load_nifti(fullFileName)
