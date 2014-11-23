@@ -36,6 +36,8 @@ function accuracy = randomForestWML(fileName, numFolds, maxTrees)
         getTrainingAndTesting(SVvectors,labels, numFolds);
 
     totalAcc = zeros(numFolds,1);
+    WMLrecall = zeros(numFolds,1);
+    WMLprecision = zeros(numFolds,1);
     for fold = 1:numFolds
         train = trainCell{fold};
         test = testCell{fold};
@@ -50,6 +52,9 @@ function accuracy = randomForestWML(fileName, numFolds, maxTrees)
         acc = sum(testID == predictions)/length(testID);
         
         totalAcc(fold) = acc;
+        WMLrecall(fold) = sum(predictions & testID)/sum(testID == 1);
+        WMLprecision(fold) = sum(predictions & testID)/...
+            sum(predictions == 1);
     end
     
     fprintf('\n');
@@ -63,6 +68,8 @@ function accuracy = randomForestWML(fileName, numFolds, maxTrees)
     fprintf('Max Accuracy = %f\n', maxaccuracy);
     fprintf('Min Accuracy = %f\n', minaccuracy);
     fprintf('SD Accuracy = %f\n', sdaccuracy);
+    fprintf('WML precision = %f\n', mean(WMLprecision));
+    fprintf('WML recall = %f\n', mean(WMLrecall));
 end
 
 function [trainCell testCell trainLabelCell testLabelCell] = ...
@@ -137,29 +144,48 @@ function trees = buildTrees(train, trainID, maxTrees)
     
     trees = cell(maxTrees,1);
     
+    % randomly select a portion of the non WML SV's to train on
+    % since we want approximately equal numebers of each class
+    numWML = sum(trainID); % since WML = 1 and not = 0
+    WMLinds = find(trainID == 1);
+    nonWMLinds = find(trainID == 0);
+    randNonWMLInds = randperm(length(nonWMLinds));
+    newTrainInds = [WMLinds;randNonWMLInds(1:numWML)'];
+    train = train(newTrainInds,:);
+    trainID = trainID(newTrainInds);
+    
+    
     for treeNum = 1:maxTrees
         % create and store decision tree
         tree = fitctree(train,trainID);
         trees{treeNum} = tree;
         
-        preds = predict(tree,trainID);
+        preds = predict(tree,train);
         
         if all(preds == trainID)
             % we've perfectly described the training data
             break
         end
         
+        % index of every place where we incorrectly labeled a WML site
+        %badInds = find((preds ~= trainID) & (trainID));
+        
+        % index of every place where our guess was incorrect
         badInds = find(preds ~= trainID);
         
         % double the number of wrong training examples
         examplesToAdd = train(badInds);
         IDsToAdd = trainID(badInds);
-        train(end+1:end+size(examplesToAdd,1),:) = examplesToAdd;
-        trainID(end+1:end+size(IDsToAdd,1)) = IDsToAdd;
+        %fprintf('Adding missed: %d',treeNum)
+        for i = 1:size(examplesToAdd,1)
+            %fprintf('.')
+            train(end+1,:) = examplesToAdd(i,:);
+            trainID(end+1) = IDsToAdd(i,:);
+        end
+        %fprintf('\n')
         
     end        
-    
-    trees = trees{1:treeNum};
+
 end
 
 function predictions = makePredictions(trees, test)
@@ -167,9 +193,20 @@ function predictions = makePredictions(trees, test)
     preds = zeros(size(test,1),length(trees));
     
     for treeNum = 1:length(trees)
-        preds(:,treeNum) = predict(trees{treeNum},test);
+        tree = trees{treeNum};
+        try
+            preds(:,treeNum) = predict(tree,test);
+        catch
+            fprintf('Training tree converged\n');
+            break
+        end
     end
     
     % TODO: DO MAJORITY VOTES STRATEGY TO MERGE PREDICTIONS
     
+    % in case we broke early
+    preds = preds(:,1:treeNum);
+    
+    predictions = mode(preds,2);
+        
 end

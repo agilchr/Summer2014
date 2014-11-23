@@ -7,7 +7,7 @@
 %
 % Changed from ADNI to WML on 10-27
 
-function slicFeatures = runSLIC_WML(imageNum, res, numSuperVoxels, ...
+function slicFeatures = runSLIC_WML(imageNum, numSuperVoxels, res, ...
                                 shapeParam, numIters)
     % slicFeatures - Returns the list of features obtained from
     % getSLICFeatures()
