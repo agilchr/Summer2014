@@ -24,7 +24,8 @@ function runSOM()
 
     clear diffBrain;
 
-    if ~exist('diffClusterNet.mat', 'file')
+    dataDir = '/scratch/tgelles1/summer2014/SOM/'
+    if ~exist([dataDir, 'diffClusterNet.mat'], 'file')
         
         fprintf('Making the self organizing map\n');
         net = selforgmap([4 8]);
@@ -39,33 +40,32 @@ function runSOM()
         save diffClusterNet.mat net;
         disp(net);
     else
-        fprintf(['Self Organized Map Already Exists in diffClusterNet.mat. ' ...
+        fprintf(['Self Organized Map Already Exists in /scratch/tgelles1/summer204/SOM/diffClusterNet.mat. ' ...
                  'Loading...\n']);
-        net = load('diffClusterNet.mat');
+        net = load([dataDir, 'diffClusterNet.mat']);
         net = net.net;
     end
 
     for i=1:length(allbrains)
+
+        fprintf('Clustering brain %d\n', i);
         curBrain = allbrains{i};
 
-        fprintf('curBrain: %s\n', class(curBrain));
-        % disp(curBrain);
-        
         curVectorList = makeVectorList(curBrain);
         y = net(curVectorList);
         classes = vec2ind(y);
 
-        fprintf('MATLAB classes (vec2ind) class: %s\n', ...
-                class(classes));
-        fprintf('MATLAB net(curVectorList) class: %s\n', class(y));
 
-        curFileName = ['brain', num2str(i), 'array.mat'];
+        fprintf('\tSaving net\n');
+        curFileName = [dataDir, 'brain', num2str(i), 'array.mat'];
         save(curFileName, 'y');
 
-        curFileName = ['brain', num2str(i), 'classes.mat'];
+        fprintf('\tSaving classes\n');
+        curFileName = [dataDir, 'brain', num2str(i), 'classes.mat'];
         save(curFileName, 'classes');
 
-        clusteringFileName = ['brain', num2str(i), 'clusters.nii'];
+        fprintf('\tSaving clusters\n');
+        clusteringFileName = [dataDir, 'brain', num2str(i), 'clusters.nii'];
         saveClusteringAsNifti(curBrain, classes, curVectorList, ...
                               clusteringFileName);
 
@@ -88,13 +88,14 @@ function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
 
     classBrain = curBrain;
     for i=1:length(curVectorList)
-        curVec = curVectorList(i, 1:3);
+        curVec = curVectorList(1:3, i);
         x = curVec(1);
         y = curVec(2);
         z = curVec(3);
         classBrain(x, y, z) = classes(i);
     end
 
+    disp(classBrain);
     nii = make_nii(classBrain);
     save_nii(nii, fileName);
 
@@ -112,7 +113,17 @@ function vectorList = makeVectorList(brain)
     for x_i = 1:l
         for y_i = 1:w
             for z_i = 1:h
-                vectorList(:,vector_i) = [x_i;y_i;z_i;brain(x_i,y_i,z_i)];
+                vectorList(:,vector_i) = [x_i;y_i;z_i;brain(x_i, ...
+                                                            y_i,z_i)];
+
+                if (vectorList(1, vector_i) == 0 || ...
+                    vectorList(2, vector_i) == 0 || ...
+                    vectorList(3, vector_i) == 0)
+                    disp('Bad Vector!');
+                    disp(vectorList(:, vector_i));
+                    disp([x_i, y_i, z_i]);
+                end
+                
                 vector_i = vector_i + 1;
             end
         end
