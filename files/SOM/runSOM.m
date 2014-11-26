@@ -5,17 +5,19 @@ function runSOM()
     diffName = ['/scratch/tgelles1/summer2014/ADNI_cropped/' ...
                 'coregistered/AD_CN_differenceImage.nii'];
 
-    [allbrains ADbrains CNbrains] = loadADandCNBrains(loadDir);
+    [~, ADbrains, CNbrains] = loadADandCNBrains(loadDir);
     diffBrain = load_nifti(diffName);
     
     FDR = getFDR(ADbrains, CNbrains);
     
-    fprintf('Saving FDR to %s\n',[loadDir,'FDR.nii']);
-    FDRnii = make_nii(FDR);
-    save_nii(FDRnii, [loadDir,'FDR.nii']);
+    dataDir = '/scratch/tgelles1/summer2014/SOM/'
     
-    clear ADbrains;
-    clear CNbrains;
+    fprintf('Saving FDR to %s\n',[dataDir,'FDR.nii']);
+    FDRnii = make_nii(FDR);
+    save_nii(FDRnii, [dataDir,'FDR.nii']);
+    
+    %clear ADbrains;
+    %clear CNbrains;
     
     fprintf('Splitting the diff image into vectors\n');
     
@@ -24,7 +26,7 @@ function runSOM()
 
     clear diffBrain;
 
-    dataDir = '/scratch/tgelles1/summer2014/SOM/'
+    
     if ~exist([dataDir, 'diffClusterNet.mat'], 'file')
         
         fprintf('Making the self organizing map\n');
@@ -46,10 +48,10 @@ function runSOM()
         net = net.net;
     end
 
-    for i=1:length(allbrains)
+    for i=1:length(ADbrains)
 
-        fprintf('Clustering brain %d\n', i);
-        curBrain = allbrains{i};
+        fprintf('Clustering AD brain %d\n', i);
+        curBrain = ADbrains{i};
 
         curVectorList = makeVectorList(curBrain);
         y = net(curVectorList);
@@ -57,26 +59,85 @@ function runSOM()
 
 
         fprintf('\tSaving net\n');
-        curFileName = [dataDir, 'brain', num2str(i), 'array.mat'];
+        curFileName = [dataDir, 'ADbrain', sprintf('%03d',i), 'array.mat'];
         save(curFileName, 'y');
 
         fprintf('\tSaving classes\n');
-        curFileName = [dataDir, 'brain', num2str(i), 'classes.mat'];
+        curFileName = [dataDir, 'ADbrain', sprintf('%03d',i), 'classes.mat'];
         save(curFileName, 'classes');
 
         fprintf('\tSaving clusters\n');
-        clusteringFileName = [dataDir, 'brain', num2str(i), 'clusters.nii'];
-        saveClusteringAsNifti(curBrain, classes, curVectorList, ...
-                              clusteringFileName);
+        % clusteringFileName = [dataDir, 'ADbrain', sprintf('%03d',i), 'clusters.nii'];
+        % saveClusteringAsNifti(curBrain, classes, curVectorList, ...
+        %                       clusteringFileName);
 
+        regions = cell(max(classes),1);
+        disp('Size of classes')
+        disp(size(classes))
+        disp('Size of curVectorList')
+        disp(size(curVectorList))
+        for region_i = 1:length(regions)
+            regions{region_i} = curVectorList(:,find(classes == ...
+                                                   region_i));
+        end
+        fprintf('\tSaving ROIs\n');
+        regionFilename = [dataDir, 'ADbrain', sprintf('%03d',i), ...
+                          'ROI.mat'];
+        save(regionFilename,'regions');
+        
         clear curVectorList;
         clear y;
         clear classes;
         clear curBrain;
 
-        clear allbrains(i);
+        clear ADbrains(i);
     end
 
+    
+    for i=1:length(CNbrains)
+
+        fprintf('Clustering brain %d\n', i);
+        curBrain = CNbrains{i};
+
+        curVectorList = makeVectorList(curBrain);
+        y = net(curVectorList);
+        classes = vec2ind(y);
+
+
+        fprintf('\tSaving net\n');
+        curFileName = [dataDir, 'CNbrain', sprintf('%03d',i), 'array.mat'];
+        save(curFileName, 'y');
+
+        fprintf('\tSaving classes\n');
+        curFileName = [dataDir, 'CNbrain', sprintf('%03d',i), 'classes.mat'];
+        save(curFileName, 'classes');
+
+        fprintf('\tSaving clusters\n');
+        % clusteringFileName = [dataDir, 'CNbrain', sprintf('%03d',i), 'clusters.nii'];
+        % saveClusteringAsNifti(curBrain, classes, curVectorList, ...
+        %                       clusteringFileName);
+
+        regions = cell(max(classes),1);
+        for region_i = 1:length(regions)
+            regions{region_i} = curVectorList(:,find(classes == ...
+                                                   region_i));
+        end
+        
+        fprintf('\tSaving ROIs\n');
+        regionFilename = [dataDir, 'CNbrain', sprintf('%03d',i), ...
+                          'ROI.mat'];
+        save(regionFilename,'regions');
+
+        
+        clear curVectorList;
+        clear y;
+        clear classes;
+        clear curBrain;
+
+        clear CNbrains(i);
+    end
+
+    
     % to open: openfig('sompos.fig','new','visible')
     
     % y = net(allbrains);
