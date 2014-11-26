@@ -1,18 +1,45 @@
-function runSOM()
-    
-    loadDir = ['/scratch/tgelles1/summer2014/ADNI_cropped/' ...
-               'coregistered/'];
-    diffName = ['/scratch/tgelles1/summer2014/ADNI_cropped/' ...
-                'coregistered/AD_CN_differenceImage.nii'];
+function runSOM(GMorWM)
 
-    [allbrains ADbrains CNbrains] = loadADandCNBrains(loadDir);
+    if (~exist('GMorWM', 'var'))
+        GMorWM = 'GM';
+    end
+    
+    ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
+    CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
+    
+    if (GMorWM == 'GM')
+        diffName = ['/sonigroup/ADNI_SPM_Tissues/diff/AD_CN_GM_differenceImage.nii'];
+    elseif (GMorWM == 'WM')
+        diffName = ['/sonigroup/ADNI_SPM_Tissues/diff/AD_CN_WM_differenceImage.nii'];
+    else
+        fprintf('Bad Input Arg, must be either GM or WM');
+        exit;
+    end
+
+    fprintf('Loading AD Images from: %s\n', ADLoadDir);
+    fprintf('Loading CN Images from: %s\n', CNLoadDir);
+    if (GMorWM == 'GM')
+        fprintf('Using GM Tissues\n');
+    else
+        fprintf('Using WM Tissues\n');
+    end
+    
+    [allbrains ADbrains CNbrains] = loadADandCNBrains(ADLoadDir, ...
+                                                      CNLoadDir, GMorWM);
     diffBrain = load_nifti(diffName);
     
     FDR = getFDR(ADbrains, CNbrains);
-    
-    fprintf('Saving FDR to %s\n',[loadDir,'FDR.nii']);
-    FDRnii = make_nii(FDR);
-    save_nii(FDRnii, [loadDir,'FDR.nii']);
+
+    if (GMorWM == 'GM')
+        fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
+        FDRnii = make_nii(FDR);
+        save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/FDRWM.nii']);
+    else
+        fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
+        FDRnii = make_nii(FDR);
+        save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/' ...
+                          'FDRWM.nii']);
+    end
     
     clear ADbrains;
     clear CNbrains;
@@ -56,6 +83,11 @@ function runSOM()
         classes = vec2ind(y);
 
 
+        %disp(curVectorList);
+        %disp(y);
+        %disp(classes);
+
+
         fprintf('\tSaving net\n');
         curFileName = [dataDir, 'brain', num2str(i), 'array.mat'];
         save(curFileName, 'y');
@@ -69,6 +101,10 @@ function runSOM()
         saveClusteringAsNifti(curBrain, classes, curVectorList, ...
                               clusteringFileName);
 
+        curClustering = zeros(length(classes), length(curVectorList), ...
+                              4);
+        
+        
         clear curVectorList;
         clear y;
         clear classes;
@@ -95,7 +131,8 @@ function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
         classBrain(x, y, z) = classes(i);
     end
 
-    disp(classBrain);
+    % disp(classBrain);
+    disp(max(classBrain(:)));
     nii = make_nii(classBrain);
     save_nii(nii, fileName);
 
@@ -143,9 +180,10 @@ function [X] = load_nifti(fullFileName)
     
 end
 
-function [allbrains ADbrains CNbrains] = loadADandCNBrains(directory)
+function [allbrains ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
+                                                      CNDirectory)
     
-    direc = dir(directory);
+    direc = dir(ADDirectory);
     
     ADbrains = {};
     CNbrains = {};
@@ -153,7 +191,28 @@ function [allbrains ADbrains CNbrains] = loadADandCNBrains(directory)
 
     for i = 1:length(direc)
         filename = direc(i).name;
-        if direc(i).isdir || ~strcmp(filename(1:3),'co_')
+        if direc(i).isdir || ~strcmp(filename(1:3),'rAD')
+            continue
+        end
+        if filename(4) == 'M'
+            % continues if we're dealing with an MCI file
+            continue
+        elseif filename(4) == 'A'
+            ADimage = load_nifti([directory,filename]);
+            ADbrains{end+1} = ADimage;
+            allbrains{end+1} = ADimage;
+        elseif filename(4) == 'C'
+            CNimage = load_nifti([directory,filename]);
+            CNbrains{end+1} = CNimage;
+            allbrains{end+1} = CNimage;
+        end
+    end
+
+    direc = dir(CNDirectory);
+    
+    for i = 1:length(direc)
+        filename = direc(i).name;
+        if direc(i).isdir || ~strcmp(filename(1:3),'rCN')
             continue
         end
         if filename(4) == 'M'
