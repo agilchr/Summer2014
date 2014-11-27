@@ -46,7 +46,7 @@ function avgEntropy = getWMLFeatures(im,labels,groundTruth, ...
     [varIntensity varIntensitysv] = getVarIntensity(centerInfo,im,labels);
         
     %get the neighbors
-    numNeb = 4;
+    numNeb = 6;
     neighbors = getNeighbors(centerInfo,numNeb);
 
     % get whether each SV has part of a WML in it to append to end
@@ -60,6 +60,10 @@ function avgEntropy = getWMLFeatures(im,labels,groundTruth, ...
     
     %fprintf('Printing graph of average intensities');
     %graphIntensities(centerInfo);
+    
+    % normalize the XYZ coords for the brain
+    centerInfo = normalizeXYZ(centerInfo);
+    
     
     for i = 1:size(centerInfo,1)
         % x,y,z,avgintensity,varintensity,entropy,avgnebintensity,avgnebentropy
@@ -159,5 +163,13 @@ function featTruth = getTruthFeature(truth,labels, numSV)
         if any(truth(SV))
             featTruth(i) = true;
         end
+    end
+end
+
+function centerInfo = normalizeXYZ(centerInfo)
+    
+    for xyz = 1:3
+        centerInfo(:,xyz) = (centerInfo(:,xyz)-min(centerInfo(:,xyz)))/...
+            (max(centerInfo(:,xyz))-min(centerInfo(:,xyz)));
     end
 end

@@ -1,58 +1,59 @@
-function runSOM(GMorWM)
+function runSOM(usingGM)
 
-    if (~exist('GMorWM', 'var'))
-        GMorWM = 'GM';
+    if (~exist('usingGM', 'var'))
+        usingGM = 1;
     end
     
     ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
     CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
+    diffDir = '/sonigroup/ADNI_SPM_Tissues/diff/';
     
-    if (GMorWM == 'GM')
-        diffName = ['/sonigroup/ADNI_SPM_Tissues/diff/AD_CN_GM_differenceImage.nii'];
-    elseif (GMorWM == 'WM')
-        diffName = ['/sonigroup/ADNI_SPM_Tissues/diff/AD_CN_WM_differenceImage.nii'];
+    if (usingGM)
+        diffName = [diffDir, 'AD_CN_GM_differenceImage.nii'];
     else
-        fprintf('Bad Input Arg, must be either GM or WM');
-        exit;
+        diffName = [diffDir, 'AD_CN_WM_differenceImage.nii'];
     end
 
     fprintf('Loading AD Images from: %s\n', ADLoadDir);
     fprintf('Loading CN Images from: %s\n', CNLoadDir);
-    if (GMorWM == 'GM')
+    if (usingGM)
         fprintf('Using GM Tissues\n');
     else
         fprintf('Using WM Tissues\n');
     end
     
-    [allbrains ADbrains CNbrains] = loadADandCNBrains(ADLoadDir, ...
-                                                      CNLoadDir, GMorWM);
+    [ADbrains, CNbrains] = loadADandCNBrains(ADLoadDir, ...
+                                             CNLoadDir, usingGM);
     diffBrain = load_nifti(diffName);
     
     FDR = getFDR(ADbrains, CNbrains);
 
-    if (GMorWM == 'GM')
+    if (usingGM)
         fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
         FDRnii = make_nii(FDR);
-        save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/FDRWM.nii']);
+        save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
     else
-        fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
+        fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRWM.nii']);
         FDRnii = make_nii(FDR);
         save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/' ...
                           'FDRWM.nii']);
     end
     
-    clear ADbrains;
-    clear CNbrains;
+    %clear ADbrains;
+    %clear CNbrains;
     
     fprintf('Splitting the diff image into vectors\n');
-    
-
     vectorList = makeVectorList(diffBrain);
 
     clear diffBrain;
 
-    dataDir = '/scratch/tgelles1/summer2014/SOM/'
-    if ~exist([dataDir, 'diffClusterNet.mat'], 'file')
+    if (usingGM)
+        diffClusterNetName = [diffDir, 'diffClusterNetGM.mat'];
+    else
+        diffClusterNetName = [diffDir, 'diffClusterNetWM.mat'];
+    end
+    
+    if ~exist(diffClusterNetName, 'file')
         
         fprintf('Making the self organizing map\n');
         net = selforgmap([4 8]);
@@ -64,55 +65,139 @@ function runSOM(GMorWM)
         plotsompos(net,vectorList);
         saveas(gcf,'sompos.fig','fig')
         fprintf('MATLAB net class: %s\n', class(net));
-        save diffClusterNet.mat net;
+        save(diffClusterNetName, 'net');
         disp(net);
     else
-        fprintf(['Self Organized Map Already Exists in /scratch/tgelles1/summer204/SOM/diffClusterNet.mat. ' ...
-                 'Loading...\n']);
-        net = load([dataDir, 'diffClusterNet.mat']);
+        fprintf('Self Organized Map Already Exists In %s. Loading...\n', ...
+                [diffDir, diffClusterNetName]);
+        net = load([diffDir, diffClusterNetName]);
         net = net.net;
     end
 
-    for i=1:length(allbrains)
+    dataDir = '/sonigroup/ADNI_SPM_Tissues/data/';
+    
+    for i=1:length(ADbrains)
 
-        fprintf('Clustering brain %d\n', i);
-        curBrain = allbrains{i};
+        if (usingGM)
+            fprintf('Clustering AD GM brain %d\n', i);
+        else
+            fprintf('Clustering AD WM brain %d\n', i);
+        end
+        
+        curBrain = ADbrains{i};
 
         curVectorList = makeVectorList(curBrain);
         y = net(curVectorList);
         classes = vec2ind(y);
 
 
-        %disp(curVectorList);
-        %disp(y);
-        %disp(classes);
-
-
         fprintf('\tSaving net\n');
-        curFileName = [dataDir, 'brain', num2str(i), 'array.mat'];
+        if (usingGM)
+            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+                           'array.mat'];
+        else
+            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+                           'array.mat'];
+        end
         save(curFileName, 'y');
 
+
+        
         fprintf('\tSaving classes\n');
-        curFileName = [dataDir, 'brain', num2str(i), 'classes.mat'];
+        if (usingGM)
+            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        else
+            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        end
         save(curFileName, 'classes');
 
-        fprintf('\tSaving clusters\n');
-        clusteringFileName = [dataDir, 'brain', num2str(i), 'clusters.nii'];
-        saveClusteringAsNifti(curBrain, classes, curVectorList, ...
-                              clusteringFileName);
-
-        curClustering = zeros(length(classes), length(curVectorList), ...
-                              4);
-        
+        regions = cell(max(classes),1);
+        for region_i = 1:length(regions)
+            regions{region_i} = curVectorList(:,find(classes == ...
+                                                   region_i));
+        end
+        fprintf('\tSaving ROIs\n');
+        if (usingGM)
+            regionFilename = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        else
+            regionFilename = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        end
+        save(regionFilename,'regions');
         
         clear curVectorList;
         clear y;
         clear classes;
         clear curBrain;
 
-        clear allbrains(i);
+        clear ADbrains(i);
     end
 
+    
+    for i=1:length(CNbrains)
+
+        if (usingGM)
+            fprintf('Clustering CN GM brain %d\n', i);
+        else
+            fprintf('Clustering CN WM brain %d\n', i);
+        end
+        
+        curBrain = CNbrains{i};
+
+        curVectorList = makeVectorList(curBrain);
+        y = net(curVectorList);
+        classes = vec2ind(y);
+
+
+        fprintf('\tSaving net\n');
+        if (usingGM)
+            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+                           'array.mat'];
+        else
+            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+                           'array.mat'];
+        end
+        save(curFileName, 'y');
+
+
+        
+        fprintf('\tSaving classes\n');
+        if (usingGM)
+            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        else
+            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        end
+        save(curFileName, 'classes');
+
+        regions = cell(max(classes),1);
+        for region_i = 1:length(regions)
+            regions{region_i} = curVectorList(:,find(classes == ...
+                                                   region_i));
+        end
+        fprintf('\tSaving ROIs\n');
+        if (usingGM)
+            regionFilename = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        else
+            regionFilename = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        end
+        save(regionFilename,'regions');
+        
+        clear curVectorList;
+        clear y;
+        clear classes;
+        clear curBrain;
+
+        clear CNbrains(i);
+    end
+
+    
     % to open: openfig('sompos.fig','new','visible')
     
     % y = net(allbrains);
@@ -180,34 +265,30 @@ function [X] = load_nifti(fullFileName)
     
 end
 
-function [allbrains ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
-                                                      CNDirectory)
+function [ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
+                                                 CNDirectory, usingGM)
     
     direc = dir(ADDirectory);
     
     ADbrains = {};
     CNbrains = {};
-    allbrains = {};
 
     for i = 1:length(direc)
         filename = direc(i).name;
         if direc(i).isdir || ~strcmp(filename(1:3),'rAD')
             continue
         end
-        if filename(4) == 'M'
-            % continues if we're dealing with an MCI file
+        if (filename(5) == '1' && ~usingGM)
             continue
-        elseif filename(4) == 'A'
-            ADimage = load_nifti([directory,filename]);
-            ADbrains{end+1} = ADimage;
-            allbrains{end+1} = ADimage;
-        elseif filename(4) == 'C'
-            CNimage = load_nifti([directory,filename]);
-            CNbrains{end+1} = CNimage;
-            allbrains{end+1} = CNimage;
+        elseif (filename(5) == '2' && usingGM)
+            continue
         end
+        
+        ADimage = load_nifti([ADDirectory,filename]);
+        ADbrains{end+1} = ADimage;
     end
 
+    
     direc = dir(CNDirectory);
     
     for i = 1:length(direc)
@@ -215,18 +296,14 @@ function [allbrains ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
         if direc(i).isdir || ~strcmp(filename(1:3),'rCN')
             continue
         end
-        if filename(4) == 'M'
-            % continues if we're dealing with an MCI file
+        if (filename(5) == '1' && ~usingGM)
             continue
-        elseif filename(4) == 'A'
-            ADimage = load_nifti([directory,filename]);
-            ADbrains{end+1} = ADimage;
-            allbrains{end+1} = ADimage;
-        elseif filename(4) == 'C'
-            CNimage = load_nifti([directory,filename]);
-            CNbrains{end+1} = CNimage;
-            allbrains{end+1} = CNimage;
+        elseif (filename(5) == '2' && usingGM)
+            continue
         end
+        
+        CNimage = load_nifti([CNDirectory,filename]);
+        CNbrains{end+1} = CNimage;
     end
 end
 

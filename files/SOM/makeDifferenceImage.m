@@ -6,66 +6,130 @@
 % coregistered, so the size of the images should be identical
 
 function makeDifferenceImage()
+
+    fprintf('Making AD and CN Difference Images\n');
     
-    directory_name = ['/scratch/tgelles1/summer2014/ADNI_cropped/' ...
-                      'coregistered/'];
+    ad_dir_name = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
+    cn_dir_name = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
+    diff_dir_name = ['/sonigroup/ADNI_SPM_Tissues/diff/'];
+
+    fprintf('Loading AD Images from: %s\n', ad_dir_name);
+    fprintf('Loading CN IMages from: %s\n', cn_dir_name);
+    fprintf('Saving Difference Images to: %s\n', diff_dir_name);
     
-    direc = dir(directory_name);
-    
-    numAD = 0;
-    numCN = 0;
-    
-    for i = 1:length(direc)
-        filename = direc(i).name;
-        if direc(i).isdir || ~strcmp(filename(1:3),'co_')
+    numADGM = 0;
+    numCNGM = 0;
+    numADWM = 0;
+    numCNWM = 0;
+
+    ad_names = dir(ad_dir_name);
+    cn_names = dir(cn_dir_name);
+
+    n = length(ad_names);
+    n10 = n/10;
+    fprintf('Constructing Mean AD Images\n');
+    for i = 1:length(ad_names)
+
+        filename = ad_names(i).name;
+        if ad_names(i).isdir || ~strcmp(filename(1:3),'rAD')
             continue
         end
-        if filename(4) == 'M'
-            % continues if we're dealing with an MCI file
-            continue
-        elseif filename(4) == 'A'
-            ADimage = load_nifti([directory_name,filename]);
-            if exist('meanADimage','var')
-                meanADimage = meanADimage + ADimage;
+        
+        if filename(5) == '1'
+            ADimage = load_nifti([ad_dir_name,filename]);
+            if exist('meanADGMimage','var')
+                meanADGMimage = meanADGMimage + ADimage;
             else
-                meanADimage = ADimage;
+                meanADGMimage = ADimage;
             end
-            numAD = numAD + 1;
+            numADGM = numADGM + 1;
             if (any(isnan(ADimage(:))))
                 disp(filename)
             end
-            if any(isnan(meanADimage(:)))
+            if any(isnan(meanADGMimage(:)))
                 disp(filename)
             end
-        elseif filename(4) == 'C'
-            CNimage = load_nifti([directory_name,filename]);
-            if exist('meanCNimage','var')
-                meanCNimage = meanCNimage + CNimage;
+        elseif filename(5) == '2'
+            ADimage = load_nifti([ad_dir_name,filename]);
+            if exist('meanADWMimage','var')
+                meanADWMimage = meanADWMimage + ADimage;
             else
-                meanCNimage = CNimage;
+                meanADWMimage = ADimage;
             end
-            numCN = numCN + 1;
-            if any(isnan(CNimage(:)))
+            numADWM = numADWM + 1;
+            if (any(isnan(ADimage(:))))
                 disp(filename)
             end
-            if any(isnan(meanCNimage(:)))
+            if any(isnan(meanADWMimage(:)))
                 disp(filename)
             end
-
         end
     end
+
+    fprintf('\n');
+    n = length(cn_names);
+    n10 = n/10;
+    fprintf('Constructing Mean CN Images\n');
+    for i = 1:length(cn_names)
+
+        filename = cn_names(i).name;
+        if cn_names(i).isdir || ~strcmp(filename(1:3),'rCN')
+            continue
+        end
+        
+        if filename(5) == '1'
+            CNimage = load_nifti([cn_dir_name,filename]);
+            if exist('meanCNGMimage','var')
+                meanCNGMimage = meanCNGMimage + CNimage;
+            else
+                meanCNGMimage = CNimage;
+            end
+            numCNGM = numCNGM + 1;
+            if (any(isnan(CNimage(:))))
+                disp(filename)
+            end
+            if any(isnan(meanCNGMimage(:)))
+                disp(filename)
+            end
+        elseif filename(5) == '2'
+            CNimage = load_nifti([cn_dir_name,filename]);
+            if exist('meanCNWMimage','var')
+                meanCNWMimage = meanCNWMimage + CNimage;
+            else
+                meanCNWMimage = CNimage;
+            end
+            numCNWM = numCNWM + 1;
+            if (any(isnan(CNimage(:))))
+                disp(filename)
+            end
+            if any(isnan(meanCNWMimage(:)))
+                disp(filename)
+            end
+        end
+    end
+
+    fprintf('\n');
+
+    fprintf('Finding Differences...\n');
     %disp(meanADimage);
     disp(any(isnan(ADimage)));
-    if (any(isnan(meanADimage(:))))
+    if (any(isnan(meanADGMimage(:))))
         disp('Bad bad meanADimage. It is a pooopy head')
     end
-    meanADimage = meanADimage / numAD;
-    meanCNimage = meanCNimage / numCN;
+    meanADGMimage = meanADGMimage / numADGM;
+    meanCNGMimage = meanCNGMimage / numCNGM;
+    meanADWMimage = meanADWMimage / numADWM;
+    meanCNWMimage = meanCNWMimage / numCNWM;
     
-    diffImage = meanCNimage - meanADimage;
+    diffImageGM = meanCNGMimage - meanADGMimage;
+    diffImageWM = meanCNWMimage - meanADWMimage;
     
-    diffNii = make_nii(diffImage);
-    save_nii(diffNii, [directory_name,'AD_CN_differenceImage.nii'])
+    diffNiiGM = make_nii(diffImageGM);
+    diffNiiWM = make_nii(diffImageWM);
+
+    fprintf('Saving Files...\n');
+    save_nii(diffNiiGM, [diff_dir_name,'AD_CN_GM_differenceImage.nii']);
+    save_nii(diffNiiWM, [diff_dir_name,'AD_CN_WM_differenceImage.nii']);
     
 end
 
