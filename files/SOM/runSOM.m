@@ -276,7 +276,7 @@ function clusterBrains(ADbrains, CNbrains, net)
             curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
                            'net.mat'];
         end
-        save(curFileName, 'y');
+        save(curFileName, 'y', '-v7.3');
 
 
         
@@ -337,7 +337,7 @@ function clusterBrains(ADbrains, CNbrains, net)
             curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
                            'array.mat'];
         end
-        save(curFileName, 'y');
+        save(curFileName, 'y', '-v7.3');
 
 
         
