@@ -32,31 +32,45 @@ function runSVM(usingGM)
         elseif (~usingGM && strcmp(filename(3:4), 'GM'))
             continue
         end
+        
+        fprintf('Loading the clusters %s\n',filename)
 
-        fprintf('Loading %s\n', [dataDir, filename]);
         ROIs = load([dataDir, filename]);
         ROIs = ROIs.regions;
         if filename(1) == 'C'
-            CNbrains{end+1} = ROIs;
+            %CNbrains{end+1} = ROIs;
+            if ~exist('CNimportance','var')
+                CNimportance = calcImportance({ROIs},FDR);
+            else
+                CNimportance(end+1,:) = calcImportance({ROIs},FDR);
+            end
         else
-            ADbrains{end+1} = ROIs;
+            %ADbrains{end+1} = ROIs;
+            if ~exist('ADimportance','var')
+                ADimportance = calcImportance({ROIs},FDR);
+            else
+                ADimportance(end+1,:) = calcImportance({ROIs},FDR);
+            end
         end
+        clear ROIs;
     end
     
-    X = zeros(length(ADbrains) + length(CNbrains), ...
-              length(ADbrains{1}));
     YAD = [];
     YCN = [];
-    for i = 1:length(ADbrains)
-        YAD(end+1) = 'A';
+    for i = 1:size(ADimportance,1)
+        YAD(end+1) = -1;
     end
-    for i = 1:length(CNbrains)
-        YCN(end+1) = 'C';
+    for i = 1:size(CNimportance,1)
+        YCN(end+1) = 1;
     end
         
-    fprintf('Calculating importance\n');
-    ADimportance = calcImportance(ADbrains,FDR);
-    CNimportance = calcImportance(CNbrains,FDR);
+    % fprintf('Calculating importance\n');
+    % ADimportance = calcImportance(ADbrains,FDR);
+    % CNimportance = calcImportance(CNbrains,FDR);
+    
+    clear FDR;
+    clear ADbrains;
+    clear CNbrains;
 
     fprintf('Getting testing and training sets\n');
     numFolds = 5;
@@ -65,22 +79,27 @@ function runSVM(usingGM)
     [CNtrainCell CNtestCell CNtrainLabelCell CNtestLabelCell] = ...
         getTrainingAndTesting(CNimportance,YCN, numFolds);
     
+    clear ADimportance;
+    clear CNimportance;
+    clear YAD;
+    clear YCN;
+    
     totalYtest = [];
     totalYpreds = [];
     for fold = 1:numFolds
-        fprintf('Running SVM, fold: %d',fold);
+        fprintf('Running SVM, fold: %d\n',fold);
         Xtrain = [ADtrainCell{fold};CNtrainCell{fold}];
         Ytrain = [ADtrainLabelCell{fold}';CNtrainLabelCell{fold}'];
-        disp(class(Xtrain));
-        disp(class(Ytrain));
         Xtest = [ADtestCell{fold};CNtestCell{fold}];
         Ytest = [ADtestLabelCell{fold}';CNtestLabelCell{fold}'];
         
-        model = svmtrain(Ytrain, Xtrain);
+        model = svmtrain(Ytrain, Xtrain, '-t 2 -c 100');
         
         [predictions, acc, probs] = svmpredict(Ytest, Xtest, model);
         
-        fprintf('Accuracy for fold %d: %f\n',fold,acc);
+        % disp(fold)
+        % disp(class(fold))
+        fprintf('Accuracy for fold %f: %f\n',fold,acc);
         
         totalYtest = [totalYtest; Ytest];
         totalYpreds = [totalYpreds; predictions];
