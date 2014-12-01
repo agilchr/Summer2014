@@ -27,6 +27,13 @@ function runSVM(usingGM)
         if ~strcmp(filename(end-6:end),'ROI.mat')
             continue
         end
+        if (usingGM && ~strcmp(filename(3:4), 'GM'))
+            continue
+        elseif (~usingGM && strcmp(filename(3:4), 'GM'))
+            continue
+        end
+
+        fprintf('Loading %s\n', [dataDir, filename]);
         ROIs = load([dataDir, filename]);
         ROIs = ROIs.regions;
         if filename(1) == 'C'

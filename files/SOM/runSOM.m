@@ -3,6 +3,8 @@ function runSOM(usingGM)
     if (~exist('usingGM', 'var'))
         usingGM = 1;
     end
+
+    checkFiles();
     
     ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
     CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
@@ -21,187 +23,14 @@ function runSOM(usingGM)
     else
         fprintf('Using WM Tissues\n');
     end
+
     
     [ADbrains, CNbrains] = loadADandCNBrains(ADLoadDir, ...
                                              CNLoadDir, usingGM);
-    diffBrain = load_nifti(diffName);
-    
-    FDR = getFDR(ADbrains, CNbrains);
 
-    if (usingGM)
-        fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
-        FDRnii = make_nii(FDR);
-        save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/FDRGM.nii']);
-    else
-        fprintf('Saving FDR to %s\n',['/sonigroup/ADNI_SPM_Tissues/diff/FDRWM.nii']);
-        FDRnii = make_nii(FDR);
-        save_nii(FDRnii, ['/sonigroup/ADNI_SPM_Tissues/diff/' ...
-                          'FDRWM.nii']);
-    end
-    
-    %clear ADbrains;
-    %clear CNbrains;
-    
-    fprintf('Splitting the diff image into vectors\n');
-    vectorList = makeVectorList(diffBrain);
-
-    clear diffBrain;
-
-    if (usingGM)
-        diffClusterNetName = [diffDir, 'diffClusterNetGM.mat'];
-    else
-        diffClusterNetName = [diffDir, 'diffClusterNetWM.mat'];
-    end
-    
-    if ~exist(diffClusterNetName, 'file')
-        
-        fprintf('Making the self organizing map\n');
-        net = selforgmap([4 8]);
-        fprintf('Training the self organizing map\n');
-        net = train(net,vectorList);
-        fprintf('Viewing the self organizing map\n');
-        view(net);
-        figure('Visible','off');
-        plotsompos(net,vectorList);
-        saveas(gcf,'sompos.fig','fig')
-        fprintf('MATLAB net class: %s\n', class(net));
-        save(diffClusterNetName, 'net');
-        disp(net);
-    else
-        fprintf('Self Organized Map Already Exists In %s. Loading...\n', ...
-                [diffDir, diffClusterNetName]);
-        net = load([diffDir, diffClusterNetName]);
-        net = net.net;
-    end
-
-    dataDir = '/sonigroup/ADNI_SPM_Tissues/data/';
-    
-    for i=1:length(ADbrains)
-
-        if (usingGM)
-            fprintf('Clustering AD GM brain %d\n', i);
-        else
-            fprintf('Clustering AD WM brain %d\n', i);
-        end
-        
-        curBrain = ADbrains{i};
-
-        curVectorList = makeVectorList(curBrain);
-        y = net(curVectorList);
-        classes = vec2ind(y);
-
-
-        fprintf('\tSaving net\n');
-        if (usingGM)
-            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
-                           'array.mat'];
-        else
-            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
-                           'array.mat'];
-        end
-        save(curFileName, 'y');
-
-
-        
-        fprintf('\tSaving classes\n');
-        if (usingGM)
-            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        else
-            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        end
-        save(curFileName, 'classes');
-
-        regions = cell(max(classes),1);
-        for region_i = 1:length(regions)
-            regions{region_i} = curVectorList(:,find(classes == ...
-                                                   region_i));
-        end
-        fprintf('\tSaving ROIs\n');
-        if (usingGM)
-            regionFilename = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
-                              'ROI.mat'];
-        else
-            regionFilename = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
-                              'ROI.mat'];
-        end
-        save(regionFilename,'regions');
-        
-        clear curVectorList;
-        clear y;
-        clear classes;
-        clear curBrain;
-
-        clear ADbrains(i);
-    end
-
-    
-    for i=1:length(CNbrains)
-
-        if (usingGM)
-            fprintf('Clustering CN GM brain %d\n', i);
-        else
-            fprintf('Clustering CN WM brain %d\n', i);
-        end
-        
-        curBrain = CNbrains{i};
-
-        curVectorList = makeVectorList(curBrain);
-        y = net(curVectorList);
-        classes = vec2ind(y);
-
-
-        fprintf('\tSaving net\n');
-        if (usingGM)
-            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
-                           'array.mat'];
-        else
-            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
-                           'array.mat'];
-        end
-        save(curFileName, 'y');
-
-
-        
-        fprintf('\tSaving classes\n');
-        if (usingGM)
-            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        else
-            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        end
-        save(curFileName, 'classes');
-
-        regions = cell(max(classes),1);
-        for region_i = 1:length(regions)
-            regions{region_i} = curVectorList(:,find(classes == ...
-                                                   region_i));
-        end
-        fprintf('\tSaving ROIs\n');
-        if (usingGM)
-            regionFilename = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
-                              'ROI.mat'];
-        else
-            regionFilename = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
-                              'ROI.mat'];
-        end
-        save(regionFilename,'regions');
-        
-        clear curVectorList;
-        clear y;
-        clear classes;
-        clear curBrain;
-
-        clear CNbrains(i);
-    end
-
-    
-    % to open: openfig('sompos.fig','new','visible')
-    
-    % y = net(allbrains);
-    % classes = vec2ind(y);
+    makeFDR(ADbrains, CNbrains, usingGM);
+    net = getDiffClusterNet(diffName);
+    clusterBrains(ADbrains, CNbrains, net);
 end
 
 function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
@@ -331,5 +160,217 @@ function vectorList = splitBrainToVector(allbrains)
         end
         clear brain;
         clear allbrains{brain_i};
+    end
+end
+
+function checkFiles()
+
+    ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
+    CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
+    diffDir = '/sonigroup/ADNI_SPM_Tissues/diff/';
+    
+    if (usingGM)
+        diffName = [diffDir, 'AD_CN_GM_differenceImage.nii'];
+    else
+        diffName = [diffDir, 'AD_CN_WM_differenceImage.nii'];
+    end
+
+    if (~exist(ADLoadDir, 'dir'))
+        fprintf('ERROR: Directory %s Does Not Exist\n', ADLoadDir);
+        exit;
+    end
+    if (~exist(CNLoadDir, 'dir'))
+        fprintf('ERROR: Directory %s Does Not Exist\n', CNLoadDir);
+        exit;
+    end
+    if (~exist(diffDir, 'dir'))
+        fprintf('ERROR: Directory %s Does Not Exist\n', diffDir);
+        exit;
+    end
+    if (~exist(diffName, 'file'))
+        fprintf('ERROR: Difference Image File %s Does Not Exist\n', ...
+                diffName);
+        exit;
+    end
+end
+
+function makeFDR(ADbrains, CNbrains, usingGM)
+
+    if (usingGM)
+        fdrName = [diffDir, 'FDRGM.nii'];
+    else
+        fdrName = [diffDir, 'FDRWM.nii'];
+    end
+    if (exist(fdrName, 'file'))
+        fprintf('FDR File Exists at %s', fdrName);
+    else
+        
+        FDR = getFDR(ADbrains, CNbrains);
+    
+        fprintf('Saving FDR to %s\n',fdrName);
+        FDRnii = make_nii(FDR);
+        save_nii(FDRnii, fdrName);
+    end
+end
+
+function getDiffClusterNet(diffName)
+
+    diffBrain = load_nifti(diffName);
+    fprintf('Splitting the diff image into vectors\n');
+    vectorList = makeVectorList(diffBrain);
+
+    clear diffBrain;
+
+    if (usingGM)
+        diffClusterNetName = [diffDir, 'diffClusterNetGM.mat'];
+    else
+        diffClusterNetName = [diffDir, 'diffClusterNetWM.mat'];
+    end
+    
+    if ~exist(diffClusterNetName, 'file')
+        
+        fprintf('Making the self organizing map\n');
+        net = selforgmap([4 8]);
+        fprintf('Training the self organizing map\n');
+        net = train(net,vectorList);
+        fprintf('Viewing the self organizing map\n');
+        view(net);
+        figure('Visible','off');
+        plotsompos(net,vectorList);
+        saveas(gcf,'sompos.fig','fig')
+        fprintf('MATLAB net class: %s\n', class(net));
+        save(diffClusterNetName, 'net');
+        disp(net);
+    else
+        fprintf('Self Organized Map Already Exists In %s. Loading...\n', ...
+                [diffDir, diffClusterNetName]);
+        net = load([diffDir, diffClusterNetName]);
+        net = net.net;
+    end
+end
+
+function clusterBrains(ADbrains, CNbrains, net)
+
+    dataDir = '/sonigroup/ADNI_SPM_Tissues/data/';
+    
+    for i=1:length(ADbrains)
+
+        if (usingGM)
+            fprintf('Clustering AD GM brain %d\n', i);
+        else
+            fprintf('Clustering AD WM brain %d\n', i);
+        end
+        
+        curBrain = ADbrains{i};
+
+        curVectorList = makeVectorList(curBrain);
+        y = net(curVectorList);
+        classes = vec2ind(y);
+
+
+        fprintf('\tSaving net\n');
+        if (usingGM)
+            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+                           'net.mat'];
+        else
+            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+                           'net.mat'];
+        end
+        save(curFileName, 'y');
+
+
+        
+        fprintf('\tSaving classes\n');
+        if (usingGM)
+            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        else
+            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        end
+        save(curFileName, 'classes');
+
+        regions = cell(max(classes),1);
+        for region_i = 1:length(regions)
+            regions{region_i} = curVectorList(:,find(classes == ...
+                                                   region_i));
+        end
+        fprintf('\tSaving ROIs\n');
+        if (usingGM)
+            regionFilename = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        else
+            regionFilename = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        end
+        save(regionFilename,'regions');
+        
+        clear curVectorList;
+        clear y;
+        clear classes;
+        clear curBrain;
+
+        clear ADbrains(i);
+    end
+
+    
+    for i=1:length(CNbrains)
+
+        if (usingGM)
+            fprintf('Clustering CN GM brain %d\n', i);
+        else
+            fprintf('Clustering CN WM brain %d\n', i);
+        end
+        
+        curBrain = CNbrains{i};
+
+        curVectorList = makeVectorList(curBrain);
+        y = net(curVectorList);
+        classes = vec2ind(y);
+
+
+        fprintf('\tSaving net\n');
+        if (usingGM)
+            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+                           'array.mat'];
+        else
+            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+                           'array.mat'];
+        end
+        save(curFileName, 'y');
+
+
+        
+        fprintf('\tSaving classes\n');
+        if (usingGM)
+            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        else
+            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+                           'classes.mat'];
+        end
+        save(curFileName, 'classes');
+
+        regions = cell(max(classes),1);
+        for region_i = 1:length(regions)
+            regions{region_i} = curVectorList(:,find(classes == ...
+                                                   region_i));
+        end
+        fprintf('\tSaving ROIs\n');
+        if (usingGM)
+            regionFilename = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        else
+            regionFilename = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+                              'ROI.mat'];
+        end
+        save(regionFilename,'regions');
+        
+        clear curVectorList;
+        clear y;
+        clear classes;
+        clear curBrain;
+
+        clear CNbrains(i);
     end
 end
