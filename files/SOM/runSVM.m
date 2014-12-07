@@ -34,7 +34,7 @@ function runSVM(usingGM)
         end
         
         fprintf('Loading the clusters %s\n',filename)
-        
+
         ROIs = load([dataDir, filename]);
         ROIs = ROIs.regions;
         if filename(1) == 'C'
