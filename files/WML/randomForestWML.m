@@ -29,9 +29,6 @@ function accuracy = randomForestWML(fileName, numFolds, maxTrees)
     
     SVvectors = normalizeVectors(SVvectors);
     
-    % disp(brainVectors(:,1:15))
-    % pause;
-    
     [trainCell testCell trainLabelCell testLabelCell] = ...
         getTrainingAndTesting(SVvectors,labels, numFolds);
 
@@ -168,10 +165,10 @@ function trees = buildTrees(train, trainID, maxTrees)
         end
         
         % index of every place where we incorrectly labeled a WML site
-        %badInds = find((preds ~= trainID) & (trainID));
+        badInds = find((preds ~= trainID) & (trainID));
         
         % index of every place where our guess was incorrect
-        badInds = find(preds ~= trainID);
+        %badInds = find(preds ~= trainID);
         
         % double the number of wrong training examples
         examplesToAdd = train(badInds);
@@ -201,8 +198,6 @@ function predictions = makePredictions(trees, test)
             break
         end
     end
-    
-    % TODO: DO MAJORITY VOTES STRATEGY TO MERGE PREDICTIONS
     
     % in case we broke early
     preds = preds(:,1:treeNum);

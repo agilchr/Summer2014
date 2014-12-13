@@ -37,6 +37,13 @@ function accuracy = svmWML(fileName, numFolds)
         trainID = trainLabelCell{fold};
         testID = testLabelCell{fold};
         
+        numWML = sum(trainID == 1); % since WML has class label 1
+        lessNormal = find(trainID == 0);
+        trainInds = [lessNormal(1:numWML);find(trainID == 1)];
+        train = train(trainInds);
+        trainID = trainID(trainInds);
+        
+        
         % Trade off commented regions to try to vary parameters for
         % the SVM
         model = svmtrain(trainID, train);
@@ -57,8 +64,7 @@ function accuracy = svmWML(fileName, numFolds)
         % cmd = ['-c ', num2str(bestc), ' -g ', num2str(bestg), '-t 2'];
         % model = svmtrain(trainID, train, cmd);
         
-        [predictions, acc, probs] = svmpredict(testID, test, ...
-                                               model);
+        [predictions, acc, probs] = svmpredict(testID, test, model);
         
         makeConfusionMatrix(predictions,testID)
         

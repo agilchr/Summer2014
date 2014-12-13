@@ -93,7 +93,7 @@ function runSVM(usingGM)
         Xtest = [ADtestCell{fold};CNtestCell{fold}];
         Ytest = [ADtestLabelCell{fold}';CNtestLabelCell{fold}'];
         
-        model = svmtrain(Ytrain, Xtrain, '-t 2 -c 100');
+        model = svmtrain(Ytrain, Xtrain, '-t 2 -c 1000');
         
         [predictions, acc, probs] = svmpredict(Ytest, Xtest, model);
         
