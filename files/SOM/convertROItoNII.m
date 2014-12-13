@@ -14,24 +14,34 @@ function convertROItoNII()
     disp(size(file1brain));
     disp(size(file2brain));
 
+    fprintf('Loading ROIs\n');
     ROIs = load(ROIfilename);
     ROIs = ROIs.regions;
 
+    fprintf('Converting ROIs\n');
     newROIs = zeros(size(file1brain));
     for i = 1:length(ROIs)
         for j = 1:length(ROIs{i})
             curVec = ROIs{i}(:, j);
-            newROIs(curVec(1:3)) = i*10;
-            
-            % x = curVec(1);
-            % y = curVec(2);
-            % z = curVec(3);
-            % newROIs(x, y, z) = i;
+
+            x = curVec(1);
+            y = curVec(2);
+            z = curVec(3);
+
+            %            disp([x, y, z]);
+            %newROIs(curVec(1:3)) = i*10;
+            newROIs(x, y, z) = i*10;
+            %            disp(newROIs(curVec(1:3)));
+            %            disp(newROIs(x, y, z));
+            %            pause;
+            %            disp(i*10);
         end
     end
 
     newROIfilename = ['/sonigroup/ADNI_SPM_Tissues/data/' ...
                       'ADGMbrain001ROI.nii'];
+
+    %    disp(newROIs);
     ROInii = make_nii(newROIs);
     save_nii(ROInii, newROIfilename);
 end

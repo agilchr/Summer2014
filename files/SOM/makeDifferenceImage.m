@@ -25,8 +25,6 @@ function makeDifferenceImage()
     ad_names = dir(ad_dir_name);
     cn_names = dir(cn_dir_name);
 
-    n = length(ad_names);
-    n10 = n/10;
     fprintf('Constructing Mean AD Images\n');
     for i = 1:length(ad_names)
 
@@ -67,8 +65,6 @@ function makeDifferenceImage()
     end
 
     fprintf('\n');
-    n = length(cn_names);
-    n10 = n/10;
     fprintf('Constructing Mean CN Images\n');
     for i = 1:length(cn_names)
 

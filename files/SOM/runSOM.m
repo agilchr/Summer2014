@@ -4,7 +4,7 @@ function runSOM(usingGM)
         usingGM = 1;
     end
 
-    checkFiles();
+    checkFiles(usingGM);
     
     ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
     CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
@@ -24,13 +24,15 @@ function runSOM(usingGM)
         fprintf('Using WM Tissues\n');
     end
 
+
+    net = getDiffClusterNet(diffName, usingGM, diffDir);
     
     [ADbrains, CNbrains] = loadADandCNBrains(ADLoadDir, ...
                                              CNLoadDir, usingGM);
 
-    makeFDR(ADbrains, CNbrains, usingGM);
-    net = getDiffClusterNet(diffName);
-    clusterBrains(ADbrains, CNbrains, net);
+    makeFDR(ADbrains, CNbrains, usingGM, diffDir);
+
+    clusterBrains(ADbrains, CNbrains, net, usingGM);
 end
 
 function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
@@ -53,8 +55,12 @@ function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
     clear classBrain;
 end
     
-function vectorList = makeVectorList(brain)
+function vectorList = makeVectorList(brain, isDiffImage)
 
+    if (~exist('isDiffImage', 'var'))
+        isDiffImage = 0;
+    end
+    
     [l w h] = size(brain);
     
     vectorList = zeros(4,l*w*h);
@@ -64,6 +70,11 @@ function vectorList = makeVectorList(brain)
     for x_i = 1:l
         for y_i = 1:w
             for z_i = 1:h
+
+                if (brain(x_i, y_i, z_i) == 0 && isDiffImage)
+                    continue;
+                end
+                
                 vectorList(:,vector_i) = [x_i;y_i;z_i;brain(x_i, ...
                                                             y_i,z_i)];
 
@@ -163,7 +174,7 @@ function vectorList = splitBrainToVector(allbrains)
     end
 end
 
-function checkFiles()
+function checkFiles(usingGM)
 
     ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
     CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
@@ -194,7 +205,7 @@ function checkFiles()
     end
 end
 
-function makeFDR(ADbrains, CNbrains, usingGM)
+function makeFDR(ADbrains, CNbrains, usingGM, diffDir)
 
     if (usingGM)
         fdrName = [diffDir, 'FDRGM.nii'];
@@ -202,7 +213,7 @@ function makeFDR(ADbrains, CNbrains, usingGM)
         fdrName = [diffDir, 'FDRWM.nii'];
     end
     if (exist(fdrName, 'file'))
-        fprintf('FDR File Exists at %s', fdrName);
+        fprintf('FDR File Exists at %s\n', fdrName);
     else
         
         FDR = getFDR(ADbrains, CNbrains);
@@ -213,11 +224,11 @@ function makeFDR(ADbrains, CNbrains, usingGM)
     end
 end
 
-function getDiffClusterNet(diffName)
+function net = getDiffClusterNet(diffName, usingGM, diffDir)
 
     diffBrain = load_nifti(diffName);
     fprintf('Splitting the diff image into vectors\n');
-    vectorList = makeVectorList(diffBrain);
+    vectorList = makeVectorList(diffBrain, 1);
 
     clear diffBrain;
 
@@ -230,7 +241,7 @@ function getDiffClusterNet(diffName)
     if ~exist(diffClusterNetName, 'file')
         
         fprintf('Making the self organizing map\n');
-        net = selforgmap([4 8]);
+        net = selforgmap([4 12]);
         fprintf('Training the self organizing map\n');
         net = train(net,vectorList);
         fprintf('Viewing the self organizing map\n');
@@ -243,13 +254,13 @@ function getDiffClusterNet(diffName)
         disp(net);
     else
         fprintf('Self Organized Map Already Exists In %s. Loading...\n', ...
-                [diffDir, diffClusterNetName]);
-        net = load([diffDir, diffClusterNetName]);
+                diffClusterNetName);
+        net = load(diffClusterNetName);
         net = net.net;
     end
 end
 
-function clusterBrains(ADbrains, CNbrains, net)
+function clusterBrains(ADbrains, CNbrains, net, usingGM)
 
     dataDir = '/sonigroup/ADNI_SPM_Tissues/data/';
     
