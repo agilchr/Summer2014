@@ -348,7 +348,7 @@ function labels = getSLICclusters(diffName, usingGM)
     
     X = load_nifti(diffName);
     
-    numSuperVoxels = 500;
+    numSuperVoxels = 250;
     shapeParam = .1;
     numIters = 18;
     

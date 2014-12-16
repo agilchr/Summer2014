@@ -5,7 +5,7 @@ function runSVM(usingGM)
     end
 
     diffDir = '/sonigroup/ADNI_SPM_Tissues/diff/';
-    dataDir = '/sonigroup/ADNI_SPM_Tissues/data/';
+    dataDir = '/sonigroup/ADNI_SPM_Tissues/SLIC/';
 
     if (usingGM)
         FDR = load_nifti([diffDir, 'FDRGM.nii']);
