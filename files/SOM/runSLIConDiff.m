@@ -244,7 +244,7 @@ function net = getDiffClusterNet(diffName, usingGM, diffDir)
     if ~exist(diffClusterNetName, 'file')
         
         fprintf('Making the self organizing map\n');
-        net = selforgmap([4 4 2]);
+        net = selforgmap([4 4 3]);
         fprintf('Training the self organizing map\n');
         net = train(net,vectorList);
         fprintf('Viewing the self organizing map\n');
@@ -322,7 +322,7 @@ function clusterBrains(ADbrains, CNbrains, clusters, usingGM, diffName)
 
         curVectorList = makeVectorList(curBrain);
 
-        regions = cell(max(classes),1);
+        regions = cell(max(clusters(:)),1);
         for region_i = 1:length(regions)
             regions{region_i} = curVectorList(:,find(clusters == region_i));
         end

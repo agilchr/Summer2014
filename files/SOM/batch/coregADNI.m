@@ -7,17 +7,17 @@ function coregADNI()
     ADinputs = cell(0, numAD);
     CNinputs = cell(0, numMCI);
     MCIinputs = cell(0, numCN);
-    for num = 1:numAD
+    parfor num = 1:numAD
         theJob = ADcoregistration(num);
         spm('defaults', 'FMRI');
         spm_jobman('serial', theJob, '', ADinputs{:});
     end
-    for num = 1:numCN
+    parfor num = 1:numCN
         theJob = CNcoregistration(num);
         spm('defaults', 'FMRI');
         spm_jobman('serial', theJob, '', CNinputs{:});
     end
-    for num = 1:numMCI
+    parfor num = 1:numMCI
         theJob = MCIcoregistration(num);
         spm('defaults', 'FMRI');
         spm_jobman('serial', theJob, '', MCIinputs{:});
@@ -25,8 +25,10 @@ function coregADNI()
 end
 
 function matlabbatch = ADcoregistration(imageNum)
-    matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {'/sonigroup/ADNI_SPM_Tissues/AD/ADc2patient001.nii,1'};
-    matlabbatch{1}.spm.spatial.coreg.estwrite.source = {['/sonigroup/ADNI_SPM_Tissues/AD/ADc2patient',sprintf('%03d',imageNum),'.nii,1']};
+    filename = ['/sonigroup/fmri/AD_T1/patient',sprintf('%d', imageNum),'.nii'];
+    fprintf('Current file is %s\n',filename);
+    matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {'/sonigroup/fmri/AD_T1/patient1.nii,1'};
+    matlabbatch{1}.spm.spatial.coreg.estwrite.source = {[filename,',1']};
     matlabbatch{1}.spm.spatial.coreg.estwrite.other = {''};
     matlabbatch{1}.spm.spatial.coreg.estwrite.eoptions.cost_fun = 'nmi';
     matlabbatch{1}.spm.spatial.coreg.estwrite.eoptions.sep = [4 2];
@@ -40,8 +42,10 @@ end
 
                         
 function matlabbatch = CNcoregistration(imageNum)
-    matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {'/sonigroup/ADNI_SPM_Tissues/AD/ADc2patient001.nii,1'};
-    matlabbatch{1}.spm.spatial.coreg.estwrite.source = {['/sonigroup/ADNI_SPM_Tissues/CN/CNc2patient',sprintf('%03d',imageNum),'.nii,1']};
+    filename = ['/sonigroup/fmri/CN_T1/patient',sprintf('%d', imageNum),'.nii'];
+    fprintf('Current file is %s\n',filename);
+    matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {'/sonigroup/fmri/AD_T1/patient1.nii,1'};
+    matlabbatch{1}.spm.spatial.coreg.estwrite.source = {[filename,',1']};
     matlabbatch{1}.spm.spatial.coreg.estwrite.other = {''};
     matlabbatch{1}.spm.spatial.coreg.estwrite.eoptions.cost_fun = 'nmi';
     matlabbatch{1}.spm.spatial.coreg.estwrite.eoptions.sep = [4 2];
@@ -55,8 +59,10 @@ end
 
                             
 function matlabbatch = MCIcoregistration(imageNum)
-    matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {'/sonigroup/ADNI_SPM_Tissues/AD/ADc2patient001.nii,1'};
-    matlabbatch{1}.spm.spatial.coreg.estwrite.source = {['/sonigroup/ADNI_SPM_Tissues/MCI/MCIc2patient',sprintf('%03d',imageNum),'.nii,1']};
+    filename = ['/sonigroup/fmri/MCI_T1/patient',sprintf('%d', imageNum),'.nii'];
+    fprintf('Current file is %s\n',filename);
+    matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {'/sonigroup/fmri/AD_T1/patient1.nii,1'};
+    matlabbatch{1}.spm.spatial.coreg.estwrite.source = {[filename,',1']};
     matlabbatch{1}.spm.spatial.coreg.estwrite.other = {''};
     matlabbatch{1}.spm.spatial.coreg.estwrite.eoptions.cost_fun = 'nmi';
     matlabbatch{1}.spm.spatial.coreg.estwrite.eoptions.sep = [4 2];
