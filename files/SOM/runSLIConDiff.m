@@ -1,4 +1,4 @@
-function runSOM(usingGM)
+function runSLIConDiff(usingGM)
 
     if (~exist('usingGM', 'var'))
         usingGM = 1;
@@ -24,14 +24,16 @@ function runSOM(usingGM)
         fprintf('Using WM Tissues\n');
     end
 
-    net = getDiffClusterNet(diffName, usingGM, diffDir);
+    %net = getDiffClusterNet(diffName, usingGM, diffDir);
+    
+    clusters = getSLICclusters(diffName, usingGM);
     
     [ADbrains, CNbrains] = loadADandCNBrains(ADLoadDir, ...
                                              CNLoadDir, usingGM);
 
     makeFDR(ADbrains, CNbrains, usingGM, diffDir);
 
-    clusterBrains(ADbrains, CNbrains, net, usingGM, diffName);
+    clusterBrains(ADbrains, CNbrains, clusters, usingGM, diffName);
 end
 
 function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
@@ -242,7 +244,7 @@ function net = getDiffClusterNet(diffName, usingGM, diffDir)
     if ~exist(diffClusterNetName, 'file')
         
         fprintf('Making the self organizing map\n');
-        net = selforgmap([4 3 3]);
+        net = selforgmap([4 4 2]);
         fprintf('Training the self organizing map\n');
         net = train(net,vectorList);
         fprintf('Viewing the self organizing map\n');
@@ -261,22 +263,17 @@ function net = getDiffClusterNet(diffName, usingGM, diffDir)
     end
 end
 
-function clusterBrains(ADbrains, CNbrains, net, usingGM, diffName)
+function clusterBrains(ADbrains, CNbrains, clusters, usingGM, diffName)
 
-    dataDir = '/sonigroup/ADNI_SPM_Tissues/data/';
+    slicDir = '/sonigroup/ADNI_SPM_Tissues/SLIC/';
     
     fprintf(['Clustering the difference image for visualization ' ...
              'purposes\n'])
 
     diff = load_nifti(diffName);
     diffvecs = makeVectorList(diff,1);
-    diffy = net(diffvecs);
-    diffclasses = vec2ind(diffy);
+    regions = clusters;
     
-    regions = cell(max(diffclasses),1);
-    for region_i = 1:length(regions)
-        regions{region_i} = diffvecs(:,find(diffclasses == region_i));
-    end
     save([diffName,'ROI.mat'],'regions')
     
     
@@ -291,50 +288,22 @@ function clusterBrains(ADbrains, CNbrains, net, usingGM, diffName)
         curBrain = ADbrains{i};
 
         curVectorList = makeVectorList(curBrain);
-        y = net(curVectorList);
-        classes = vec2ind(y);
 
-
-        fprintf('\tSaving net\n');
-        if (usingGM)
-            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
-                           'net.mat'];
-        else
-            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
-                           'net.mat'];
-        end
-        save(curFileName, 'y', '-v7.3');
-
-
-        
-        fprintf('\tSaving classes\n');
-        if (usingGM)
-            curFileName = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        else
-            curFileName = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        end
-        save(curFileName, 'classes');
-
-        regions = cell(max(classes),1);
+        regions = cell(max(clusters(:)),1);
         for region_i = 1:length(regions)
-            regions{region_i} = curVectorList(:,find(classes == ...
-                                                   region_i));
+            regions{region_i} = curVectorList(:,find(clusters == region_i));
         end
         fprintf('\tSaving ROIs\n');
         if (usingGM)
-            regionFilename = [dataDir, 'ADGMbrain', sprintf('%03d',i), ...
+            regionFilename = [slicDir, 'ADGMbrain', sprintf('%03d',i), ...
                               'ROI.mat'];
         else
-            regionFilename = [dataDir, 'ADWMbrain', sprintf('%03d',i), ...
+            regionFilename = [slicDir, 'ADWMbrain', sprintf('%03d',i), ...
                               'ROI.mat'];
         end
         save(regionFilename,'regions');
         
         clear curVectorList;
-        clear y;
-        clear classes;
         clear curBrain;
 
         clear ADbrains(i);
@@ -352,52 +321,36 @@ function clusterBrains(ADbrains, CNbrains, net, usingGM, diffName)
         curBrain = CNbrains{i};
 
         curVectorList = makeVectorList(curBrain);
-        y = net(curVectorList);
-        classes = vec2ind(y);
-
-
-        fprintf('\tSaving net\n');
-        if (usingGM)
-            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
-                           'array.mat'];
-        else
-            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
-                           'array.mat'];
-        end
-        save(curFileName, 'y', '-v7.3');
-
-
-        
-        fprintf('\tSaving classes\n');
-        if (usingGM)
-            curFileName = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        else
-            curFileName = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
-                           'classes.mat'];
-        end
-        save(curFileName, 'classes');
 
         regions = cell(max(classes),1);
         for region_i = 1:length(regions)
-            regions{region_i} = curVectorList(:,find(classes == ...
-                                                   region_i));
+            regions{region_i} = curVectorList(:,find(clusters == region_i));
         end
+        
         fprintf('\tSaving ROIs\n');
         if (usingGM)
-            regionFilename = [dataDir, 'CNGMbrain', sprintf('%03d',i), ...
+            regionFilename = [slicDir, 'CNGMbrain', sprintf('%03d',i), ...
                               'ROI.mat'];
         else
-            regionFilename = [dataDir, 'CNWMbrain', sprintf('%03d',i), ...
+            regionFilename = [slicDir, 'CNWMbrain', sprintf('%03d',i), ...
                               'ROI.mat'];
         end
         save(regionFilename,'regions');
         
         clear curVectorList;
-        clear y;
-        clear classes;
         clear curBrain;
 
         clear CNbrains(i);
     end
 end
+
+function labels = getSLICclusters(diffName, usingGM)
+    
+    X = load_nifti(diffName);
+    
+    numSuperVoxels = 500;
+    shapeParam = .1;
+    numIters = 18;
+    
+    labels = SLIC_3D(X,numSuperVoxels, shapeParam, numIters);
+end    

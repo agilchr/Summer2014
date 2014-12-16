@@ -1,4 +1,8 @@
-function runAll()
+function runAll(useSLIC)
+    
+    if ~exist('useSLIC','var')
+        useSLIC = 1;
+    end
 
     usingGM = 1;
     while (true)
@@ -19,8 +23,13 @@ function runAll()
         end
     end
         
-    makeDifferenceImage();
-    makeFDR(usingGM);
-    runSOM(usingGM);
+    %makeDifferenceImage();
+    %makeFDR(usingGM);
+    
+    if useSLIC
+        runSLIConDiff(usingGM);
+    else
+        runSOM(usingGM);
+    end
     runSVM(usingGM);
 end

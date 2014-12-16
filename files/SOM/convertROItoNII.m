@@ -1,7 +1,7 @@
 function convertROItoNII()
 
-    ROIfilename = ['/sonigroup/ADNI_SPM_Tissues/data/' ...
-                   'ADGMbrain001ROI.mat'];
+    ROIfilename = ['/sonigroup/ADNI_SPM_Tissues/diff/' ...
+                   'AD_CN_GM_differenceImage.niiROI.mat'];
 
     file1name = ['/sonigroup/ADNI_SPM_Tissues/AD/' ...
                  'rADc1patient001.nii'];
@@ -23,10 +23,15 @@ function convertROItoNII()
     for i = 1:length(ROIs)
         for j = 1:length(ROIs{i})
             curVec = ROIs{i}(:, j);
-
+            %disp([i,j])
+            
             x = curVec(1);
             y = curVec(2);
             z = curVec(3);
+            
+            if (x == 0 || y == 0 || z == 0)
+                continue
+            end
 
             %            disp([x, y, z]);
             %newROIs(curVec(1:3)) = i*10;
@@ -39,7 +44,7 @@ function convertROItoNII()
     end
 
     newROIfilename = ['/sonigroup/ADNI_SPM_Tissues/data/' ...
-                      'ADGMbrain001ROI.nii'];
+                      'AD_CN_diffImageROI.nii'];
 
     %    disp(newROIs);
     ROInii = make_nii(newROIs);
