@@ -1,9 +1,20 @@
-% this file is intended to calculate the difference image between
-% AD and CN by finding the mean of each and taking the difference
-% Note: we assume that the directory was of our own creation, thus
-% we can assume things about the file naming convention
-% we also assume that all of the files have been successfully
-% coregistered, so the size of the images should be identical
+%{
+Authors: Teo Gelles & Andrew Gilchrist-Scott
+Last Updated: 12/17/2014
+
+This file is intended to calculate the difference image between
+AD and CN by finding the mean of each and taking the difference
+Note: we assume that the directory was of our own creation, thus
+we can assume things about the file naming convention
+we also assume that all of the files have been successfully
+coregistered, so the size of the images should be identical.
+
+Note: We use images from our testing dataset to make the difference
+image.  We recognize that this may be experimentally unjustified,
+but our goal was to recreate the pipeline described in
+http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0093851#s1
+which also did this.                                   
+%}
 
 function makeDifferenceImage()
 

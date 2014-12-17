@@ -1,4 +1,12 @@
-% Note: assumes all brains are the same size
+%{
+Authors: Teo Gelles & Andrew Gilchrist-Scott
+Last Updated: 12/17/2014
+
+This file calculates the Fischer-Discriminant-Ratio (FDR) for two
+sets of brain images.  This is called in runSOM, and used in runSVM
+to calculate the "relative importance" of each image, which is used
+for learning.
+%}
 
 function FDR = getFDR(brainset1,brainset2)
     allBrains1 = concatImages(brainset1);

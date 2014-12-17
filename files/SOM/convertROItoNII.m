@@ -1,7 +1,16 @@
+%{
+Authors: Teo Gelles & Andrew Gilchrist-Scott
+Last Updated: 12/17/2014
+
+This file converts a region-of-interest (ROI) file outputed from
+runSOM into a .nii nifti file that can be viewed with suitable
+software, such as SPM or FreeView.
+%}
+
 function convertROItoNII()
 
-    ROIfilename = ['/sonigroup/ADNI_SPM_Tissues/diff/' ...
-                   'AD_CN_GM_differenceImage.niiROI.mat'];
+    ROIfilename = ['/sonigroup/ADNI_SPM_Tissues/data/ADGMbrain001ROI.mat'];
+                   
 
     file1name = ['/sonigroup/ADNI_SPM_Tissues/AD/' ...
                  'rADc1patient001.nii'];
@@ -23,8 +32,7 @@ function convertROItoNII()
     for i = 1:length(ROIs)
         for j = 1:length(ROIs{i})
             curVec = ROIs{i}(:, j);
-            %disp([i,j])
-            
+              
             x = curVec(1);
             y = curVec(2);
             z = curVec(3);
@@ -33,20 +41,13 @@ function convertROItoNII()
                 continue
             end
 
-            %            disp([x, y, z]);
-            %newROIs(curVec(1:3)) = i*10;
             newROIs(x, y, z) = i*10;
-            %            disp(newROIs(curVec(1:3)));
-            %            disp(newROIs(x, y, z));
-            %            pause;
-            %            disp(i*10);
         end
     end
 
     newROIfilename = ['/sonigroup/ADNI_SPM_Tissues/data/' ...
                       'AD_CN_diffImageROI.nii'];
 
-    %    disp(newROIs);
     ROInii = make_nii(newROIs);
     save_nii(ROInii, newROIfilename);
 end

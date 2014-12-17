@@ -1,3 +1,14 @@
+%}{
+Authors: Teo Gelles & Andrew Gilchrist-Scott
+Last Updated: 12/17/2014
+
+This file runs almost the entire classification pipeline, including making
+the difference image, making the SOM clustering of the difference
+image, and using SVMs to classify each brain based on the
+clustering and relative importance.
+
+Note: This file does not do tissue segmentation or image coregistration.
+%}
 function runAll(useSLIC)
     
     if ~exist('useSLIC','var')
@@ -22,9 +33,8 @@ function runAll(useSLIC)
             disp('Invalid Input')
         end
     end
-        
-    %makeDifferenceImage();
-    %makeFDR(usingGM);
+
+    makeDifferenceImage();
     
     if useSLIC
         runSLIConDiff(usingGM);

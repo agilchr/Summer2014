@@ -1,0 +1,24 @@
+Authors: Teo Gelles & Andrew Gilchrist-Scott
+Last Updated: 12/17/2014
+
+This directory contains our implementation of the pipeline desribed in
+http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0093851#s1
+
+This pipeline can be described as follows:
+1. Obtain the ADNI dataset
+2. Coregister all the images in the dataset and perform tissue segmentation
+   (With SPM8)
+   The most useful of these tissue segmentations is GM, followed by WM.
+   Note each of the following steps in the pipeline is done using only
+   one of the tissue segmentations (either GM or WM).
+3. Make the difference image between AD and CN brain tissues.
+4. Use SOMs to cluster the difference image (use either MATLAB's native SOM
+   or the somtoolbox)
+5. Calculate the FDR for the dataset
+6. Cluster each brain in the dataset based on the SOM clustering of the
+   difference image.
+7. Calculate the "relative importance" value of each cluster in each brain
+   by summing the intensities of the voxels in each cluster multiplied by
+   the FDR of that coordinate.
+8. Use SVMs to classify images based on the relative importances of their
+   clusters.

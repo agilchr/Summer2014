@@ -1,3 +1,10 @@
+%{
+Authors: Teo Gelles & Andrew Gilchrist-Scott
+Last Updated: 12/17/2014
+
+This file checks whether any brain image in a given directory
+contains NaN values, which was an issue early on in our work.
+%}
 function checkBrainNan(directory_name)
 
     direc = dir(directory_name);
