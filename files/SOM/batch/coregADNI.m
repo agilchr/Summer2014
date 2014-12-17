@@ -7,17 +7,20 @@ function coregADNI()
     ADinputs = cell(0, numAD);
     CNinputs = cell(0, numMCI);
     MCIinputs = cell(0, numCN);
-    parfor num = 1:numAD
+    for num = 1:numAD
+        if num == 66
+            continue
+        end
         theJob = ADcoregistration(num);
         spm('defaults', 'FMRI');
         spm_jobman('serial', theJob, '', ADinputs{:});
     end
-    parfor num = 1:numCN
+    for num = 1:numCN
         theJob = CNcoregistration(num);
         spm('defaults', 'FMRI');
         spm_jobman('serial', theJob, '', CNinputs{:});
     end
-    parfor num = 1:numMCI
+    for num = 1:numMCI
         theJob = MCIcoregistration(num);
         spm('defaults', 'FMRI');
         spm_jobman('serial', theJob, '', MCIinputs{:});
