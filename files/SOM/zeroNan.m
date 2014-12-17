@@ -1,4 +1,9 @@
 function zeroNan(directory_name)
+% takes all of the nifti files in a given directory and converts
+% all NaN values to zeros
+%
+% Written by Teo Gelles and Andrew Gilchrist-Scott
+% Last edited on December 17, 2014
 
     direc = dir(directory_name);
     

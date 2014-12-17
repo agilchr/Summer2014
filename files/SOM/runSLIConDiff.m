@@ -1,9 +1,19 @@
 function runSLIConDiff(usingGM)
-
+% runSLIConDiff
+% Code is implemented to complete the process of creating a SLIC
+% clustering of a difference image then applying that clustering to
+% all of the other brains within our dataset
+%
+% @param usingGM - controls whether or not we will be testing on GM images or WM
+% images, since Ortiz et al did better on gray matter, this is our default
+%   
+% Written by Teo Gelles and Andrew Gilchrist-Scott
+% Last edited on December 17, 2014
+    
     if (~exist('usingGM', 'var'))
         usingGM = 1;
     end
-
+    
     checkFiles(usingGM);
     
     ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
@@ -24,8 +34,6 @@ function runSLIConDiff(usingGM)
         fprintf('Using WM Tissues\n');
     end
 
-    %net = getDiffClusterNet(diffName, usingGM, diffDir);
-    
     clusters = getSLICclusters(diffName, usingGM);
     
     [ADbrains, CNbrains] = loadADandCNBrains(ADLoadDir, ...
@@ -38,6 +46,19 @@ end
 
 function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
                                fileName)
+    % Takes a brain that has a curtain class clusering and a vector
+    % list representation of the brain and transforms that into a
+    % three dimensional matrix comaptible with nifit standards
+    %
+    % @param curbrain - the brain to be converted, makes for an
+    % easy size template
+    % @param classses - the list of the all of the class labels for
+    % each of the vectors in the list
+    % @param curVectorList - vector list representation of the
+    % brain where each vector is the x,y,z position of the voxel
+    % and the intensity there
+    % @param filename - where we want the nifti file to be saved
+    
 
     classBrain = curBrain;
     for i=1:length(curVectorList)
@@ -49,7 +70,7 @@ function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
     end
 
     % disp(classBrain);
-    disp(max(classBrain(:)));
+    % disp(max(classBrain(:)));
     nii = make_nii(classBrain);
     save_nii(nii, fileName);
 
@@ -57,6 +78,15 @@ function saveClusteringAsNifti(curBrain, classes, curVectorList, ...
 end
     
 function vectorList = makeVectorList(brain, isDiffImage)
+% Makes a brain into a vector list, or a list of 4d vectors which
+% have the x,y,z and intensity of each voxel in the brain
+%
+% @param brain - 3d matrix of the brain MRI voxels
+% @param isDiffImage - boolean determining if we're dealing with
+% the difference image or not
+%
+% @return vectorList - the brain broken down into a list of
+% vectors, note that this is quadruple the size of the original brain
 
     if (~exist('isDiffImage', 'var'))
         isDiffImage = 0;
@@ -71,14 +101,20 @@ function vectorList = makeVectorList(brain, isDiffImage)
     for x_i = 1:l
         for y_i = 1:w
             for z_i = 1:h
-
+                
+                % when transforming the difference image into a
+                % vector list, somehow the vector [0,0,0,0] sneaks
+                % in there, this is to prevent that from affecting
+                % the loop
                 if (brain(x_i, y_i, z_i) == 0 && isDiffImage)
                     continue;
                 end
                 
+                % append the new vector to the list
                 vectorList(:,vector_i) = [x_i;y_i;z_i;brain(x_i, ...
                                                             y_i,z_i)];
 
+                % checks if there are any other bad vectors
                 if (vectorList(1, vector_i) == 0 || ...
                     vectorList(2, vector_i) == 0 || ...
                     vectorList(3, vector_i) == 0)
@@ -94,11 +130,15 @@ function vectorList = makeVectorList(brain, isDiffImage)
 end
 
 function [X] = load_nifti(fullFileName)
-
-
+% loads a given nifti file into a 3d matrix
+%
+% @param fullFileName - file name to be loaded
+%
+% @return X - the 3d matrix of the nifti image
+    
     fprintf('Loading Nifti Image: %s\n',fullFileName);
         
-    %Image
+    %Image processing, done by SPM
     I_t1uncompress = wfu_uncompress_nifti(fullFileName);
     I_uncompt1 = spm_vol(I_t1uncompress);
     I_T1 = spm_read_vols(I_uncompt1);
@@ -107,7 +147,21 @@ function [X] = load_nifti(fullFileName)
 end
 
 function [ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
-                                                 CNDirectory, usingGM)
+                                                 CNDirectory, ...
+                                                 usingGM)
+    % by taking the proper directory and brain tissue typesm this
+    % function loads in a cell array containing all of the AD and
+    % CN brains
+    %
+    % @param ADDirectory - directory for AD files
+    % @param CNDirectory - directory for CN files
+    % @param usingGM - tells whether to gather the gray matter
+    % files or the white matter files
+    %
+    % @return ADbrains - cell array of the 3d matrices of all of
+    % the AD brains
+    % @return CNbrains - cell array of the 3d matrices of all of
+    % the CN brains
     
     direc = dir(ADDirectory);
     
@@ -119,6 +173,8 @@ function [ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
         if direc(i).isdir || ~strcmp(filename(1:3),'rAD')
             continue
         end
+        
+        % ignore files of the wrong brain type
         if (filename(5) == '1' && ~usingGM)
             continue
         elseif (filename(5) == '2' && usingGM)
@@ -149,6 +205,13 @@ function [ADbrains CNbrains] = loadADandCNBrains(ADDirectory, ...
 end
 
 function vectorList = splitBrainToVector(allbrains)
+% create a cell array for every single vector in every single brain
+% 
+% @param allbrains - cell array containing the 3d matrices for all
+% of our brains
+%
+% @return vectorList - cell array of all of the vectors from all of
+% the brains
     
     n = length(allbrains);
     [l w h] = size(allbrains{1});
@@ -176,6 +239,11 @@ function vectorList = splitBrainToVector(allbrains)
 end
 
 function checkFiles(usingGM)
+% checks that all the necessary files exist
+%
+% @param usingGM - determines whether to check for gray matter
+% files or white matter files
+    
 
     ADLoadDir = ['/sonigroup/ADNI_SPM_Tissues/AD/'];
     CNLoadDir = ['/sonigroup/ADNI_SPM_Tissues/CN/'];
@@ -207,6 +275,15 @@ function checkFiles(usingGM)
 end
 
 function makeFDR(ADbrains, CNbrains, usingGM, diffDir)
+% makes the FDR image for all the difference between AD and CN
+% brains
+%
+% @param AD/CNbrains - cell array of all AD/CN brains
+% @param usingGM - determines whether we're looking at GM or WM
+% brains
+% @param diffDir - directory in which we can find and store the
+% class difference images
+    
 
     if (usingGM)
         fdrName = [diffDir, 'FDRGM.nii'];
@@ -225,46 +302,10 @@ function makeFDR(ADbrains, CNbrains, usingGM, diffDir)
     end
 end
 
-function net = getDiffClusterNet(diffName, usingGM, diffDir)
-
-    diffBrain = load_nifti(diffName);
-    % attempt to enhance the sensitivity to intensities
-    diffBrain = diffBrain*10;
-    fprintf('Splitting the diff image into vectors\n');
-    vectorList = makeVectorList(diffBrain, 1);
-
-    clear diffBrain;
-
-    if (usingGM)
-        diffClusterNetName = [diffDir, 'diffClusterNetGM.mat'];
-    else
-        diffClusterNetName = [diffDir, 'diffClusterNetWM.mat'];
-    end
-    
-    if ~exist(diffClusterNetName, 'file')
-        
-        fprintf('Making the self organizing map\n');
-        net = selforgmap([4 4 3]);
-        fprintf('Training the self organizing map\n');
-        net = train(net,vectorList);
-        fprintf('Viewing the self organizing map\n');
-        view(net);
-        figure('Visible','off');
-        plotsompos(net,vectorList);
-        saveas(gcf,'sompos.fig','fig')
-        fprintf('MATLAB net class: %s\n', class(net));
-        save(diffClusterNetName, 'net');
-        disp(net);
-    else
-        fprintf('Self Organized Map Already Exists In %s. Loading...\n', ...
-                diffClusterNetName);
-        net = load(diffClusterNetName);
-        net = net.net;
-    end
-end
-
 function clusterBrains(ADbrains, CNbrains, clusters, usingGM, diffName)
-
+% take the regions of interes generated by the SLIC algo and apply
+% them to every brain, then save the results
+    
     slicDir = '/sonigroup/ADNI_SPM_Tissues/SLIC/';
     
     fprintf(['Clustering the difference image for visualization ' ...
@@ -348,7 +389,7 @@ function labels = getSLICclusters(diffName, usingGM)
     
     X = load_nifti(diffName);
     
-    numSuperVoxels = 250;
+    numSuperVoxels = 150;
     shapeParam = .1;
     numIters = 18;
     

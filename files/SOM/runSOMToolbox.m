@@ -1,4 +1,11 @@
 function runSOMToolbox(usingGM)
+% this file generates the SOM clustering of the difference image of
+% the brain using the self organizing map toolbox 2.0. It then
+% applies these clusters to each brain and saves the relevant
+% regions of interest.
+%
+% Written by Teo Gelles and Andrew Gilchrist-Scott
+% Last edited on December 17, 2014
 
     if (~exist('usingGM', 'var'))
         usingGM = 1;
